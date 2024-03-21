@@ -40,6 +40,9 @@ void updateEncoder(encoderInstance* encoder, TIM_HandleTypeDef *htim)
 	}
 	encoder->position += encoder->velocity; // TODO: convert to w/s? and radians
 	encoder->lastCounterValue = tmpCounter;
+
+	encoder->w = 0.17454*encoder->velocity;
+	encoder->alfa += encoder->w*0.01;
 }
 
 void resetEncoder(encoderInstance* encoder)
@@ -47,4 +50,7 @@ void resetEncoder(encoderInstance* encoder)
 	encoder->velocity = 0;
 	encoder->position= 0;
 	encoder->lastCounterValue = 0;
+
+	encoder->w = 0;
+	encoder->alfa = 0;
 }

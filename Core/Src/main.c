@@ -74,8 +74,11 @@ encoderInstance encoder;
 static uint8_t mes[] = "revolution\r\n";
 
 //static uint16_t timerCounter = 0;
-int16_t encoderVelocity;
-int32_t encoderPosition;
+//int16_t encoderVelocity;
+//int32_t encoderPosition;
+
+float w;
+float a;
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -84,8 +87,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		//timerCounter = __HAL_TIM_GET_COUNTER(&htim4);
 		updateEncoder(&encoder, &htim4);
-		encoderVelocity = encoder.velocity;
-		encoderPosition = encoder.position;
+//		encoderVelocity = encoder.velocity;
+//		encoderPosition = encoder.position;
+
+		w = encoder.w;
+		a = encoder.alfa;
+
 	}
 	if(htim == &htim4)
 	{
