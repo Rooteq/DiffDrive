@@ -21,8 +21,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "motor.h"
+
 #include <string.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +47,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim6;
 
 UART_HandleTypeDef huart2;
 
@@ -54,12 +61,75 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM4_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+encoderInstance encoder;
+
+static uint8_t mes[] = "revolution\r\n";
+
+//static uint16_t timerCounter = 0;
+int16_t encoderVelocity;
+int32_t encoderPosition;
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	//printf("revolution\n");
+	if(htim == &htim6) // try for more accurate timer? its 1ms now
+	{
+		//timerCounter = __HAL_TIM_GET_COUNTER(&htim4);
+		updateEncoder(&encoder, &htim4);
+		encoderVelocity = encoder.velocity;
+		encoderPosition = encoder.position;
+	}
+	if(htim == &htim4)
+	{
+		HAL_UART_Transmit_IT(&huart2, (uint8_t*)&mes, sizeof(mes));
+	}
+}
+
+int __io_putchar(int ch)
+{
+  if (ch == '\n') {
+    __io_putchar('\r');
+  }
+
+  HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+
+  return 1;
+}
+
+#define LINE_MAX_LENGTH 80
+
+static char line_buffer[LINE_MAX_LENGTH + 1];
+static uint32_t line_length;
+static int result = 0;
+
+int line_append(uint8_t value)
+{
+	if (value == '\r' || value == '\n') {
+		if (line_length > 0) {
+			line_buffer[line_length] = '\0';
+			result = atoi((char*)line_buffer);
+			printf("Speed: %d\n", result);
+			line_length = 0;
+			return result;
+		}
+	}
+	else {
+		if (line_length >= LINE_MAX_LENGTH) {
+			line_length = 0;
+		}
+		line_buffer[line_length++] = value;
+	}
+	return 0;
+}
+
 
 /* USER CODE END 0 */
 
@@ -93,11 +163,16 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_TIM3_Init();
+  MX_TIM4_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
 
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 
 //  static uint16_t val = 2;
 //  uint8_t buffer[8];
@@ -105,11 +180,32 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+//  static uint16_t lastEncoderValue = 0;
+
+  static int lastResult = 0;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  uint8_t value;
+	  if (HAL_UART_Receive(&huart2, &value, 1, 0) == HAL_OK)
+		  line_append(value);
+//
+	  if(lastResult!= result)
+	  {
+		  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, result);
+		  lastResult = result;
+	  }
+
+//	  uint16_t encoder = __HAL_TIM_GET_COUNTER(&htim4);
+//	  if(encoder != lastEncoderValue)
+//	  {
+//		  printf("%u\n", encoder);
+//		  //HAL_UART_Transmit_IT(&huart2, (uint8_t*)&encoder, 2);
+//		  lastEncoderValue = encoder;
+//	  }
 
 //	  int32_t len = snprintf((char*)buffer, sizeof(buffer), "%u\r\n", val);
 //	  HAL_UART_Transmit(&huart2, buffer, len, HAL_MAX_DELAY);
@@ -224,6 +320,93 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 2 */
   HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_Encoder_InitTypeDef sConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 0;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 3600-1;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
+  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC1Filter = 0;
+  sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC2Filter = 0;
+  if (HAL_TIM_Encoder_Init(&htim4, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
+
+}
+
+/**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 7999;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 99;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
 
 }
 
