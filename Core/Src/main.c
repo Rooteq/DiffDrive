@@ -69,30 +69,23 @@ static void MX_TIM6_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-encoderInstance encoder;
+MotorInstance motor1;
 
 static uint8_t mes[] = "revolution\r\n";
+static int setVelocity = 0;
 
-//static uint16_t timerCounter = 0;
-//int16_t encoderVelocity;
-//int32_t encoderPosition;
-
-float w;
-float a;
+float motorVelocity;
+int16_t motorPosition;
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	//printf("revolution\n");
-	if(htim == &htim6) // try for more accurate timer? its 1ms now
+	if(htim == &htim6) // update every 10ms
 	{
-		//timerCounter = __HAL_TIM_GET_COUNTER(&htim4);
-		updateEncoder(&encoder, &htim4);
-//		encoderVelocity = encoder.velocity;
-//		encoderPosition = encoder.position;
+		motorUpdateVelocity(&motor1);
+		motorSetSpeed(&motor1, setVelocity); // keep setVelocity internal?
 
-		w = encoder.w;
-		a = encoder.alfa;
-
+		motorVelocity = motor1.rpm;
+		motorPosition = motor1.position;
 	}
 	if(htim == &htim4)
 	{
@@ -115,17 +108,17 @@ int __io_putchar(int ch)
 
 static char line_buffer[LINE_MAX_LENGTH + 1];
 static uint32_t line_length;
-static int result = 0;
 
 int line_append(uint8_t value)
 {
 	if (value == '\r' || value == '\n') {
 		if (line_length > 0) {
 			line_buffer[line_length] = '\0';
-			result = atoi((char*)line_buffer);
-			printf("Speed: %d\n", result);
+			setVelocity = atoi((char*)line_buffer);
+			pid_reset(&(motor1.pid_controller));
+			printf("Speed: %d\n", setVelocity);
 			line_length = 0;
-			return result;
+			return setVelocity;
 		}
 	}
 	else {
@@ -173,16 +166,16 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
+  initMotor(&motor1, &htim3, TIM_CHANNEL_1, &htim4); // init motor - set channel?
+  //initMotor(&motor2, &htim3, TIM_CHANNEL_2, &htim4); // init motor 2?
+
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
 
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 
-//  static uint16_t val = 2;
-//  uint8_t buffer[8];
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -190,34 +183,14 @@ int main(void)
 
 //  static uint16_t lastEncoderValue = 0;
 
-  static int lastResult = 0;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 	  uint8_t value;
-	  if (HAL_UART_Receive(&huart2, &value, 1, 0) == HAL_OK)
+	  if (HAL_UART_Receive(&huart2, &value, 1, 0) == HAL_OK) // only temporary for setting speed
 		  line_append(value);
-//
-	  if(lastResult!= result)
-	  {
-		  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, result);
-		  lastResult = result;
-	  }
-
-//	  uint16_t encoder = __HAL_TIM_GET_COUNTER(&htim4);
-//	  if(encoder != lastEncoderValue)
-//	  {
-//		  printf("%u\n", encoder);
-//		  //HAL_UART_Transmit_IT(&huart2, (uint8_t*)&encoder, 2);
-//		  lastEncoderValue = encoder;
-//	  }
-
-//	  int32_t len = snprintf((char*)buffer, sizeof(buffer), "%u\r\n", val);
-//	  HAL_UART_Transmit(&huart2, buffer, len, HAL_MAX_DELAY);
-//	  HAL_Delay(500);
-//	  val++;
   }
   /* USER CODE END 3 */
 }
@@ -291,9 +264,9 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 9;
+  htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 100;
+  htim3.Init.Period = 999;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -351,7 +324,7 @@ static void MX_TIM4_Init(void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 0;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 3600-1;
+  htim4.Init.Period = 3599;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
