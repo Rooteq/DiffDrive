@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "motor.h"
+#include "comms.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -50,7 +51,9 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim6;
 
+UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 
@@ -59,24 +62,34 @@ UART_HandleTypeDef huart2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM6_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-MotorInstance motor1;
+PollTimers pollTimers;
 
-static uint8_t mes[] = "revolution\r\n";
-static int setVelocity = 0;
+MotorInstance motor1;
+Position position;
+ErrorFlag flag;
+
+RxCommsData rxCommsData;
+TxCommsData txCommsData;
+
+
+static uint8_t setVelocity = 0;
 
 float motorVelocity;
 int16_t motorPosition;
 
+// call motorSetSpeed less often? - set proper nvic priorities so updateVelocity doesn't get interrupted by set speed
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim6) // update every 10ms
@@ -89,7 +102,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	}
 	if(htim == &htim4)
 	{
-		HAL_UART_Transmit_IT(&huart2, (uint8_t*)&mes, sizeof(mes));
+		// wheel revolution, deprecated
+		//HAL_UART_Transmit_IT(&huart2, (uint8_t*)&mes, sizeof(mes));
 	}
 }
 
@@ -99,7 +113,7 @@ int __io_putchar(int ch)
     __io_putchar('\r');
   }
 
-  HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+  HAL_UART_Transmit_IT(&huart2, (uint8_t*)&ch, 1);
 
   return 1;
 }
@@ -130,6 +144,18 @@ int line_append(uint8_t value)
 	return 0;
 }
 
+// --------- COMMS FUNCTIONS --------------
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+	if(huart == &huart1)
+	{
+		memcpy(rxCommsData.MainBuf, rxCommsData.RxBuf, Size);
+		rxCommsData.dataSize = Size;
+		rxCommsData.handleIncomingData = 1;
+		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rxCommsData.RxBuf, RxBuf_SIZE);
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -140,7 +166,10 @@ int line_append(uint8_t value)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	position.x = 100;
+	position.x = -200;
+	position.ang = 123;
+	flag = 1;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -161,13 +190,18 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM6_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   initMotor(&motor1, &htim3, TIM_CHANNEL_1, &htim4); // init motor - set channel?
   //initMotor(&motor2, &htim3, TIM_CHANNEL_2, &htim4); // init motor 2?
+
+  initRxComms(&rxCommsData);
+  initTxComms(&txCommsData, &huart1, &position, &flag);
 
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
@@ -175,7 +209,10 @@ int main(void)
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
 
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rxCommsData.RxBuf, RxBuf_SIZE);
+  __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
 
+  initPollTimers(&pollTimers);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -188,6 +225,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+	  handleRx(&rxCommsData, &setVelocity);
+	  handleTx(&txCommsData, &pollTimers); // make pollTimers internal? call it on interrupts?
+
 	  uint8_t value;
 	  if (HAL_UART_Receive(&huart2, &value, 1, 0) == HAL_OK) // only temporary for setting speed
 		  line_append(value);
@@ -391,6 +432,41 @@ static void MX_TIM6_Init(void)
 }
 
 /**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -422,6 +498,22 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 3, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
 
 }
 
