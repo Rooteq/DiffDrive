@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "motor.h"
 #include "comms.h"
+#include "robot.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -76,7 +77,7 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN 0 */
 PollTimers pollTimers;
 
-MotorInstance motor1;
+Robot robot;
 Position position;
 ErrorFlag flag;
 
@@ -84,21 +85,23 @@ RxCommsData rxCommsData;
 TxCommsData txCommsData;
 
 
-static uint8_t setVelocity = 0;
+static int16_t setVelocity = 0;
 
 float motorVelocity;
 int16_t motorPosition;
+int16_t motorPWM;
 
 // call motorSetSpeed less often? - set proper nvic priorities so updateVelocity doesn't get interrupted by set speed
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim6) // update every 10ms
 	{
-		motorUpdateVelocity(&motor1);
-		motorSetSpeed(&motor1, setVelocity); // keep setVelocity internal?
+		motorUpdateVelocity(&(robot.motor1));
+		motorRegulateVelocity(&(robot.motor1)); // keep setVelocity internal?
 
-		motorVelocity = motor1.rpm;
-		motorPosition = motor1.position;
+		motorVelocity = robot.motor1.rpm;
+		motorPosition = robot.motor1.position;
+		motorPWM = robot.motor1.currentPWM;
 	}
 	if(htim == &htim4)
 	{
@@ -113,7 +116,7 @@ int __io_putchar(int ch)
     __io_putchar('\r');
   }
 
-  HAL_UART_Transmit_IT(&huart2, (uint8_t*)&ch, 1);
+  HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
 
   return 1;
 }
@@ -129,7 +132,7 @@ int line_append(uint8_t value)
 		if (line_length > 0) {
 			line_buffer[line_length] = '\0';
 			setVelocity = atoi((char*)line_buffer);
-			pid_reset(&(motor1.pid_controller));
+			motorSetSpeed(&(robot.motor1), setVelocity);
 			printf("Speed: %d\n", setVelocity);
 			line_length = 0;
 			return setVelocity;
@@ -197,7 +200,7 @@ int main(void)
   MX_TIM6_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  initMotor(&motor1, &htim3, TIM_CHANNEL_1, &htim4); // init motor - set channel?
+  initMotor(&(robot.motor1), &htim3, TIM_CHANNEL_1, &htim4); // init motor - set channel?
   //initMotor(&motor2, &htim3, TIM_CHANNEL_2, &htim4); // init motor 2?
 
   initRxComms(&rxCommsData);
@@ -217,7 +220,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
+//  uint32_t tt = HAL_GetTick();
 //  static uint16_t lastEncoderValue = 0;
 
   while (1)
@@ -226,8 +229,16 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	  handleRx(&rxCommsData, &setVelocity);
+	  handleRx(&rxCommsData, &setVelocity); // pass robot? then set the speed in separate function here
 	  handleTx(&txCommsData, &pollTimers); // make pollTimers internal? call it on interrupts?
+
+//	  if(HAL_GetTick() - tt > 5000)
+//	  {
+//		  pid_reset(&(robot.motor1.pid_controller));
+//
+//		  setVelocity = -setVelocity;
+//		  tt = HAL_GetTick();
+//	  }
 
 	  uint8_t value;
 	  if (HAL_UART_Receive(&huart2, &value, 1, 0) == HAL_OK) // only temporary for setting speed
@@ -537,6 +548,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, A1_Pin|A2_Pin, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
@@ -549,6 +563,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : A1_Pin A2_Pin */
+  GPIO_InitStruct.Pin = A1_Pin|A2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

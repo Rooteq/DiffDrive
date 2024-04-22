@@ -64,7 +64,7 @@ void UARTSendPos(TxCommsData* txCommsData)
     HAL_UART_Transmit_IT(txCommsData->huart, tx_buffer, sizeof(tx_buffer)); // handle buffer overflow?
 }
 
-void handleCommand(RxCommsData* rxCommsData, uint8_t* setVelocity)
+void handleCommand(RxCommsData* rxCommsData, int16_t* setVelocity)
 {
 	switch(rxCommsData->MainBuf[1])
 	{
@@ -84,7 +84,7 @@ void handleCommand(RxCommsData* rxCommsData, uint8_t* setVelocity)
 
 
 
-void handleRx(RxCommsData* rxCommsData, uint8_t* setVelocity) // pass internal state as argument so that it could do something xdd
+void handleRx(RxCommsData* rxCommsData, int16_t* setVelocity) // pass internal state as argument so that it could do something xdd
 {
 	if(rxCommsData->handleIncomingData == 1)
 	{

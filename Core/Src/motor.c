@@ -49,12 +49,13 @@ void motorUpdateVelocity(MotorInstance* motor)
 
 void initMotor(MotorInstance* motor, TIM_HandleTypeDef *motorHtim, uint8_t motorChannel, TIM_HandleTypeDef *encoderHtim)
 {
+	motor->setRpm = 0;
 	motor->currentPWM = 0;
 	motor->motorHtim = motorHtim;
 	motor->motorChannel = motorChannel;
 	motor->rpm = 0;
 	motor->position=0;
-
+	motor->direction = CW;
 	motor->encoder.lastCounterValue = 0;
 	motor->encoder.encoderHtim = encoderHtim;
 	motor->encoder.velocity = 0;
@@ -64,24 +65,35 @@ void initMotor(MotorInstance* motor, TIM_HandleTypeDef *motorHtim, uint8_t motor
 	__HAL_TIM_SET_COMPARE(motor->motorHtim, motor->motorChannel, motor->currentPWM);
 }
 
-void motorSetSpeed(MotorInstance* motor, int setSpeed)
+void motorRegulateVelocity(MotorInstance* motor)
 {
-	int output = pid_calculate(&(motor->pid_controller), setSpeed, motor->rpm);
+	int output = pid_calculate(&(motor->pid_controller), motor->setRpm, motor->rpm);
 
 	motor->currentPWM += output;
 
-	if(motor->currentPWM > 1000)
-	{
-		return;
-	}
-
 	if(motor->currentPWM >= 0)
 	{
+		HAL_GPIO_WritePin(A1_GPIO_Port, A1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(A2_GPIO_Port, A2_Pin, GPIO_PIN_RESET);
+
 		 __HAL_TIM_SET_COMPARE(motor->motorHtim, motor->motorChannel, motor->currentPWM);
 	}
 	else
 	{
-		 __HAL_TIM_SET_COMPARE(motor->motorHtim, motor->motorChannel, 0);
+		HAL_GPIO_WritePin(A1_GPIO_Port, A1_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(A2_GPIO_Port, A2_Pin, GPIO_PIN_SET);
+		 __HAL_TIM_SET_COMPARE(motor->motorHtim, motor->motorChannel, -motor->currentPWM);
 	}
 }
+
+void motorSetSpeed(MotorInstance* motor, float setRpm)
+{
+	if(motor->setRpm != setRpm)
+	{
+		pid_reset(&(motor->pid_controller));
+	}
+
+	motor->setRpm = setRpm;
+}
+
 
