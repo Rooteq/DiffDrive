@@ -47,15 +47,16 @@ void motorUpdateVelocity(MotorInstance* motor)
 	motor->rpm = encoder->velocity*1.67;
 }
 
-void initMotor(MotorInstance* motor, TIM_HandleTypeDef *motorHtim, uint8_t motorChannel, TIM_HandleTypeDef *encoderHtim)
+void initMotor(MotorInstance* motor, TIM_HandleTypeDef *motorHtim, uint8_t motorChannel, TIM_HandleTypeDef *encoderHtim, MotorSide side)
 {
+	motor->stop = true;
+	motor->side = side;
 	motor->setRpm = 0;
 	motor->currentPWM = 0;
 	motor->motorHtim = motorHtim;
 	motor->motorChannel = motorChannel;
 	motor->rpm = 0;
 	motor->position=0;
-	motor->direction = CW;
 	motor->encoder.lastCounterValue = 0;
 	motor->encoder.encoderHtim = encoderHtim;
 	motor->encoder.velocity = 0;
@@ -67,33 +68,93 @@ void initMotor(MotorInstance* motor, TIM_HandleTypeDef *motorHtim, uint8_t motor
 
 void motorRegulateVelocity(MotorInstance* motor)
 {
-	int output = pid_calculate(&(motor->pid_controller), motor->setRpm, motor->rpm);
+	if(motor->stop == true)
+	{
+		motorSetDirection(motor, STOP);
+		return;
+	}
 
-	motor->currentPWM += output;
+	motor->currentPWM += pid_calculate(&(motor->pid_controller), motor->setRpm, motor->rpm);
+
+	if(motor->currentPWM > 500)
+		motor->currentPWM = 500;
+	if(motor->currentPWM < -500)
+		motor->currentPWM = -500;
 
 	if(motor->currentPWM >= 0)
 	{
-		HAL_GPIO_WritePin(A1_GPIO_Port, A1_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(A2_GPIO_Port, A2_Pin, GPIO_PIN_RESET);
+		motorSetDirection(motor, FORWARDS);
+		if(motor->side == RIGHT)
+			__HAL_TIM_SET_COMPARE(motor->motorHtim, TIM_CHANNEL_1, motor->currentPWM);
+		else
+			__HAL_TIM_SET_COMPARE(motor->motorHtim, TIM_CHANNEL_2, motor->currentPWM);
 
-		 __HAL_TIM_SET_COMPARE(motor->motorHtim, motor->motorChannel, motor->currentPWM);
 	}
 	else
 	{
-		HAL_GPIO_WritePin(A1_GPIO_Port, A1_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(A2_GPIO_Port, A2_Pin, GPIO_PIN_SET);
-		 __HAL_TIM_SET_COMPARE(motor->motorHtim, motor->motorChannel, -motor->currentPWM);
+		motorSetDirection(motor, BACKWARDS);
+		if(motor->side == RIGHT)
+			__HAL_TIM_SET_COMPARE(motor->motorHtim, TIM_CHANNEL_1, -motor->currentPWM);
+		else
+			__HAL_TIM_SET_COMPARE(motor->motorHtim, TIM_CHANNEL_2, -motor->currentPWM);
+
 	}
 }
 
 void motorSetSpeed(MotorInstance* motor, float setRpm)
 {
+	if(setRpm == 0)
+	{
+		motor->stop = true;
+		motor->setRpm = setRpm;
+		return;
+	}
+
 	if(motor->setRpm != setRpm)
 	{
 		pid_reset(&(motor->pid_controller));
+		motor->setRpm = setRpm;
+		motor->stop = false;
+	}
+}
+
+void motorSetDirection(MotorInstance* motor, MotorDirection direction)
+{
+	if(direction == STOP)
+	{
+		HAL_GPIO_WritePin(A1_GPIO_Port, A1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(A2_GPIO_Port, A2_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_SET);
+		return;
 	}
 
-	motor->setRpm = setRpm;
+	if(direction == FORWARDS)
+	{
+		if(motor->side == RIGHT)
+		{
+			HAL_GPIO_WritePin(A1_GPIO_Port, A1_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(A2_GPIO_Port, A2_Pin, GPIO_PIN_RESET);
+		}
+		else if(motor->side == LEFT)
+		{
+			HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_SET);
+		}
+	}
+	else if(direction == BACKWARDS)
+	{
+		if(motor->side == RIGHT)
+		{
+			HAL_GPIO_WritePin(A1_GPIO_Port, A1_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(A2_GPIO_Port, A2_Pin, GPIO_PIN_SET);
+		}
+		else if(motor->side == LEFT)
+		{
+			HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_RESET);
+		}
+	}
 }
 
 

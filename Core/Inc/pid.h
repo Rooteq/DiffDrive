@@ -8,6 +8,9 @@
 #ifndef INC_PID_H_
 #define INC_PID_H_
 
+#define SAMPLING_RATE 100
+#define PID_MAX_INTEGRAL 20000
+
 typedef struct
 {
 	int previous_error; 		//Poprzedni błąd dla członu różniczkującego

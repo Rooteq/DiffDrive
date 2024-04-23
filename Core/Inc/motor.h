@@ -2,19 +2,27 @@
 #define INC_MOTOR_H_
 
 #define MOTOR_A_Kp					1.2
-#define MOTOR_A_Ki					0.06
-#define MOTOR_A_Kd					0.4
+#define MOTOR_A_Ki					0.6
+#define MOTOR_A_Kd					0.8
 #define MOTOR_A_ANTI_WINDUP			1000
 
 #include <stdint.h>
 #include <main.h>
 #include "pid.h"
+#include <stdbool.h>
 
 typedef enum
 {
-	CW = 0,
-	CCW = 1
-}motorDirection;
+	FORWARDS = 0,
+	BACKWARDS = 1,
+	STOP = 2
+}MotorDirection;
+
+typedef enum
+{
+	LEFT = 0,
+	RIGHT = 1
+}MotorSide;
 
 // TODO: Sample the encoders every miliseconds from sysTick!!!
 
@@ -29,23 +37,26 @@ typedef struct{
 
 typedef struct
 {
+	MotorSide side;
 
 	float rpm;
 	float setRpm;
 	int64_t position;
 
-	uint16_t currentPWM;
-	motorDirection direction;
+	int currentPWM;
 
 	pid_str pid_controller;
 	EncoderInstance encoder;
 	TIM_HandleTypeDef *motorHtim;
 	uint8_t motorChannel;
+
+	bool stop;
 }MotorInstance;
 
 void motorUpdateVelocity(MotorInstance* motor);
-void initMotor(MotorInstance* motor, TIM_HandleTypeDef *motorHtim, uint8_t motorChannel, TIM_HandleTypeDef *encoderHtim);
+void initMotor(MotorInstance* motor, TIM_HandleTypeDef *motorHtim, uint8_t motorChannel, TIM_HandleTypeDef *encoderHtim, MotorSide side);
 void motorRegulateVelocity(MotorInstance* motor);
 void motorSetSpeed(MotorInstance* motor, float setRpm);
+void motorSetDirection(MotorInstance* motor, MotorDirection direction);
 
 #endif /* INC_MOTOR_H_ */

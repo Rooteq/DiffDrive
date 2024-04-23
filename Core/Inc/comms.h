@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <main.h>
+#include "robot.h"
 
 #define RxBuf_SIZE 10 // max message sizes
 #define MainBuf_SIZE 20
@@ -35,7 +36,7 @@ typedef struct{
 	uint8_t handleIncomingData;
 	uint8_t dataSize;
 	uint8_t RxBuf[RxBuf_SIZE];
-	uint8_t MainBuf[MainBuf_SIZE]; // no?
+	uint8_t MainBuf[MainBuf_SIZE];
 
 } RxCommsData;
 
@@ -55,9 +56,9 @@ void int16_to_bytes(int16_t value, uint8_t *buffer);
 uint16_t crc16(const uint8_t* data_p, uint8_t length);
 void UARTSendPos(TxCommsData* txCommsData);
 
-void handleCommand(RxCommsData* rxCommsData, int16_t* setVelocity);
+void handleCommand(RxCommsData* rxCommsData, Robot* robot);
 
-void handleRx(RxCommsData* rxCommsData, int16_t* setVelocity);
+void handleRx(RxCommsData* rxCommsData, Robot* robot);
 void handleTx(TxCommsData* txCommsData, PollTimers* pollTimers); // make pollTimers internal? call it on interrupts?
 
 

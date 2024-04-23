@@ -50,6 +50,7 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim6;
 
 UART_HandleTypeDef huart1;
@@ -66,9 +67,10 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_TIM4_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM5_Init(void);
+static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -87,21 +89,28 @@ TxCommsData txCommsData;
 
 static int16_t setVelocity = 0;
 
-float motorVelocity;
-int16_t motorPosition;
-int16_t motorPWM;
+float motor1Velocity;
+float motor2Velocity;
 
+int16_t motorPosition;
+int16_t motor1PWM;
+int16_t motor2PWM;
 // call motorSetSpeed less often? - set proper nvic priorities so updateVelocity doesn't get interrupted by set speed
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim6) // update every 10ms
 	{
+//		motorUpdateVelocity(&(robot.motor1));
+//		motorRegulateVelocity(&(robot.motor1)); // keep setVelocity internal?
+		motorUpdateVelocity(&(robot.motor2));
+		motorRegulateVelocity(&(robot.motor2)); // keep setVelocity internal?
 		motorUpdateVelocity(&(robot.motor1));
 		motorRegulateVelocity(&(robot.motor1)); // keep setVelocity internal?
 
-		motorVelocity = robot.motor1.rpm;
-		motorPosition = robot.motor1.position;
-		motorPWM = robot.motor1.currentPWM;
+		motor2Velocity = robot.motor2.rpm;
+		motor2PWM = robot.motor2.currentPWM;
+		motor1Velocity = robot.motor1.rpm;
+		motor1PWM = robot.motor1.currentPWM;
 	}
 	if(htim == &htim4)
 	{
@@ -133,7 +142,8 @@ int line_append(uint8_t value)
 			line_buffer[line_length] = '\0';
 			setVelocity = atoi((char*)line_buffer);
 			motorSetSpeed(&(robot.motor1), setVelocity);
-			printf("Speed: %d\n", setVelocity);
+			motorSetSpeed(&(robot.motor2), setVelocity);
+			printf("Speed: %d\n", (int)robot.motor1.setRpm);
 			line_length = 0;
 			return setVelocity;
 		}
@@ -196,12 +206,13 @@ int main(void)
   MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_TIM3_Init();
-  MX_TIM4_Init();
   MX_TIM6_Init();
   MX_USART1_UART_Init();
+  MX_TIM5_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  initMotor(&(robot.motor1), &htim3, TIM_CHANNEL_1, &htim4); // init motor - set channel?
-  //initMotor(&motor2, &htim3, TIM_CHANNEL_2, &htim4); // init motor 2?
+  initMotor(&(robot.motor1), &htim3, TIM_CHANNEL_1, &htim4, RIGHT);
+  initMotor(&(robot.motor2), &htim3, TIM_CHANNEL_2, &htim5, LEFT);
 
   initRxComms(&rxCommsData);
   initTxComms(&txCommsData, &huart1, &position, &flag);
@@ -209,8 +220,11 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
   HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim5);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
   HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
+  HAL_TIM_Encoder_Start(&htim5, TIM_CHANNEL_ALL);
 
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rxCommsData.RxBuf, RxBuf_SIZE);
   __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
@@ -221,7 +235,10 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 //  uint32_t tt = HAL_GetTick();
-//  static uint16_t lastEncoderValue = 0;
+  motorSetSpeed(&(robot.motor2), 0);
+  motorSetSpeed(&(robot.motor1), 0);
+
+  //  static uint16_t lastEncoderValue = 0;
 
   while (1)
   {
@@ -229,7 +246,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	  handleRx(&rxCommsData, &setVelocity); // pass robot? then set the speed in separate function here
+	  handleRx(&rxCommsData, &robot); // pass robot? then set the speed in separate function here
 	  handleTx(&txCommsData, &pollTimers); // make pollTimers internal? call it on interrupts?
 
 //	  if(HAL_GetTick() - tt > 5000)
@@ -348,6 +365,11 @@ static void MX_TIM3_Init(void)
   {
     Error_Handler();
   }
+  sConfigOC.Pulse = 0;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
@@ -387,7 +409,7 @@ static void MX_TIM4_Init(void)
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
+  sConfig.IC2Filter = 10;
   if (HAL_TIM_Encoder_Init(&htim4, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -401,6 +423,55 @@ static void MX_TIM4_Init(void)
   /* USER CODE BEGIN TIM4_Init 2 */
 
   /* USER CODE END TIM4_Init 2 */
+
+}
+
+/**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_Encoder_InitTypeDef sConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 0;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 3599;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
+  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC1Filter = 10;
+  sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC2Filter = 10;
+  if (HAL_TIM_Encoder_Init(&htim5, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
 
 }
 
@@ -546,10 +617,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, D1_Pin|D2_Pin|A1_Pin|A2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, A1_Pin|A2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -557,19 +628,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : D1_Pin D2_Pin A1_Pin A2_Pin */
+  GPIO_InitStruct.Pin = D1_Pin|D2_Pin|A1_Pin|A2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : A1_Pin A2_Pin */
-  GPIO_InitStruct.Pin = A1_Pin|A2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

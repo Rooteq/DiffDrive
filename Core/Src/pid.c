@@ -29,15 +29,24 @@ int pid_calculate(pid_str *pid_data, int setpoint, float process_variable)
 	int error;
 	float p_term, i_term, d_term;
 
-	error = setpoint - process_variable;		//obliczenie uchybu
-	pid_data->total_error += error;			//sumowanie uchybu
+	error = setpoint - process_variable;
+	pid_data->total_error += error;
+
+	if(pid_data->total_error > PID_MAX_INTEGRAL)
+	{
+		pid_data->total_error = PID_MAX_INTEGRAL;
+	}
+	if(pid_data->total_error < -PID_MAX_INTEGRAL)
+	{
+		pid_data->total_error = -PID_MAX_INTEGRAL;
+	}
 
 	p_term = (float)(pid_data->Kp * error);		//odpowiedź członu proporcjonalnego
-	i_term = (float)(pid_data->Ki * pid_data->total_error);	//odpowiedź członu całkującego
-	d_term = (float)(pid_data->Kd * (error - pid_data->previous_error));//odpowiedź członu różniczkującego
+	i_term = (float)(pid_data->Ki * pid_data->total_error) / SAMPLING_RATE;	//odpowiedź członu całkującego
+	d_term = (float)(pid_data->Kd * SAMPLING_RATE * (error - pid_data->previous_error));//odpowiedź członu różniczkującego
 
-	if(i_term >= pid_data->anti_windup_limit) i_term = pid_data->anti_windup_limit;	//Anti-Windup - ograniczenie odpowiedzi członu całkującego
-	else if(i_term <= -pid_data->anti_windup_limit) i_term = -pid_data->anti_windup_limit;
+//	if(i_term >= pid_data->anti_windup_limit) i_term = pid_data->anti_windup_limit;	//Anti-Windup - ograniczenie odpowiedzi członu całkującego
+//	else if(i_term <= -pid_data->anti_windup_limit) i_term = -pid_data->anti_windup_limit;
 
 	pid_data->previous_error = error;	//aktualizacja zmiennej z poprzednią wartością błędu
 

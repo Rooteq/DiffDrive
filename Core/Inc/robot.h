@@ -13,6 +13,7 @@
 typedef struct // equations and everything?
 {
 	MotorInstance motor1;
+	MotorInstance motor2;
 }Robot;
 
 #endif /* INC_ROBOT_H_ */

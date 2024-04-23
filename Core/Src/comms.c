@@ -64,18 +64,34 @@ void UARTSendPos(TxCommsData* txCommsData)
     HAL_UART_Transmit_IT(txCommsData->huart, tx_buffer, sizeof(tx_buffer)); // handle buffer overflow?
 }
 
-void handleCommand(RxCommsData* rxCommsData, int16_t* setVelocity)
+void handleCommand(RxCommsData* rxCommsData, Robot* robot)
 {
 	switch(rxCommsData->MainBuf[1])
 	{
 	case 'F':
-		*setVelocity = 20;
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+		motorSetSpeed(&(robot->motor1), 10);
+		motorSetSpeed(&(robot->motor2), 10);
 		break;
-
+	case 'B':
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+		motorSetSpeed(&(robot->motor1), -10);
+		motorSetSpeed(&(robot->motor2), -10);
+		break;
+	case 'L':
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+		motorSetSpeed(&(robot->motor1), 10);
+		motorSetSpeed(&(robot->motor2), -10);
+		break;
+	case 'R':
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+		motorSetSpeed(&(robot->motor1), -10);
+		motorSetSpeed(&(robot->motor2), 10);
+		break;
 	case 'S':
-		*setVelocity = 0;
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+		motorSetSpeed(&(robot->motor1), 0);
+		motorSetSpeed(&(robot->motor2), 0);
 		break;
 	default:
 		break;
@@ -84,13 +100,13 @@ void handleCommand(RxCommsData* rxCommsData, int16_t* setVelocity)
 
 
 
-void handleRx(RxCommsData* rxCommsData, int16_t* setVelocity) // pass internal state as argument so that it could do something xdd
+void handleRx(RxCommsData* rxCommsData, Robot* robot) // pass internal state as argument so that it could do something xdd
 {
 	if(rxCommsData->handleIncomingData == 1)
 	{
 		if(rxCommsData->dataSize == 2) // change to more lolz - add crc etc
 		{
-			handleCommand(rxCommsData, setVelocity);
+			handleCommand(rxCommsData, robot);
 		}
 //		else if(dataSize == ) // handle position
 		rxCommsData->handleIncomingData = 0;
