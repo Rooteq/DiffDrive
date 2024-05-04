@@ -52,9 +52,9 @@ void UARTSendPos(TxCommsData* txCommsData)
 
     tx_buffer[1] = *(txCommsData->flag);
 
-    int16_to_bytes(txCommsData->pos->x, &tx_buffer[2]);
-    int16_to_bytes(txCommsData->pos->y, &tx_buffer[4]);
-    int16_to_bytes(txCommsData->pos->ang, &tx_buffer[6]);
+    int16_to_bytes((int16_t)txCommsData->pos->x, &tx_buffer[2]);
+    int16_to_bytes((int16_t)txCommsData->pos->y, &tx_buffer[4]);
+    int16_to_bytes((int16_t)(RAD_TO_DEG * txCommsData->pos->ang), &tx_buffer[6]);
 
     uint16_t crc = crc16(&tx_buffer[1], 7);
     tx_buffer[9] = (uint8_t)(crc & 0xFF);
@@ -70,28 +70,28 @@ void handleCommand(RxCommsData* rxCommsData, Robot* robot)
 	{
 	case 'F':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		motorSetSpeed(&(robot->motor1), 10);
-		motorSetSpeed(&(robot->motor2), 10);
+		motorSetSpeed(&(robot->motorRight), 10);
+		motorSetSpeed(&(robot->motorLeft), 10);
 		break;
 	case 'B':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		motorSetSpeed(&(robot->motor1), -10);
-		motorSetSpeed(&(robot->motor2), -10);
+		motorSetSpeed(&(robot->motorRight), -10);
+		motorSetSpeed(&(robot->motorLeft), -10);
 		break;
 	case 'L':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		motorSetSpeed(&(robot->motor1), 10);
-		motorSetSpeed(&(robot->motor2), -10);
+		motorSetSpeed(&(robot->motorRight), 10);
+		motorSetSpeed(&(robot->motorLeft), -10);
 		break;
 	case 'R':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		motorSetSpeed(&(robot->motor1), -10);
-		motorSetSpeed(&(robot->motor2), 10);
+		motorSetSpeed(&(robot->motorRight), -10);
+		motorSetSpeed(&(robot->motorLeft), 10);
 		break;
 	case 'S':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-		motorSetSpeed(&(robot->motor1), 0);
-		motorSetSpeed(&(robot->motor2), 0);
+		motorSetSpeed(&(robot->motorRight), 0);
+		motorSetSpeed(&(robot->motorLeft), 0);
 		break;
 	default:
 		break;
@@ -115,7 +115,7 @@ void handleRx(RxCommsData* rxCommsData, Robot* robot) // pass internal state as 
 
 void handleTx(TxCommsData* txCommsData, PollTimers* pollTimers)
 {// make pollTimers internal? call it on interrupts?
-	if(HAL_GetTick() - pollTimers->lastTx)
+	if(HAL_GetTick() - pollTimers->lastTx > 1000)
 	{
 		UARTSendPos(txCommsData);
 		pollTimers->lastTx = HAL_GetTick();

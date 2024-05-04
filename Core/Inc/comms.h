@@ -20,17 +20,9 @@
 #define END_BYTE 0x55   // Znacznik końca ramki
 #define CRC_POLYNOMIAL 0x1021 // Standard CRC-16-ANSI polynomial
 
-typedef int8_t ErrorFlag;
-
 typedef struct{
 	uint32_t lastTx;
 }PollTimers;
-
-typedef struct{ // temporary
-	  int16_t x;
-	  int16_t y;
-	  int16_t ang;
-} Position;
 
 typedef struct{
 	uint8_t handleIncomingData;

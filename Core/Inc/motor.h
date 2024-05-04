@@ -1,10 +1,16 @@
 #ifndef INC_MOTOR_H_
 #define INC_MOTOR_H_
 
-#define MOTOR_A_Kp					1.2
-#define MOTOR_A_Ki					0.6
-#define MOTOR_A_Kd					0.8
+#define MOTOR_A_Kp					0.8
+#define MOTOR_A_Ki					0.1
+#define MOTOR_A_Kd					0.06
 #define MOTOR_A_ANTI_WINDUP			1000
+
+#define RPM_TO_RAD 0.10472
+#define RAD_TO_DEG 57.29578
+//#define MOTOR_A_Ki					0.6
+//#define MOTOR_A_Kd					0.8
+//#define MOTOR_A_ANTI_WINDUP			1000
 
 #include <stdint.h>
 #include <main.h>

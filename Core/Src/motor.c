@@ -76,10 +76,10 @@ void motorRegulateVelocity(MotorInstance* motor)
 
 	motor->currentPWM += pid_calculate(&(motor->pid_controller), motor->setRpm, motor->rpm);
 
-	if(motor->currentPWM > 500)
-		motor->currentPWM = 500;
-	if(motor->currentPWM < -500)
-		motor->currentPWM = -500;
+	if(motor->currentPWM > 600)
+		motor->currentPWM = 600;
+	if(motor->currentPWM < -600)
+		motor->currentPWM = -600;
 
 	if(motor->currentPWM >= 0)
 	{
@@ -107,14 +107,16 @@ void motorSetSpeed(MotorInstance* motor, float setRpm)
 	{
 		motor->stop = true;
 		motor->setRpm = setRpm;
+		motor->currentPWM = 0; // very important - without it, it sometimes isnt 0
+
 		return;
 	}
 
 	if(motor->setRpm != setRpm)
 	{
-		pid_reset(&(motor->pid_controller));
-		motor->setRpm = setRpm;
 		motor->stop = false;
+		motor->setRpm = setRpm;
+		pid_reset(&(motor->pid_controller));
 	}
 }
 

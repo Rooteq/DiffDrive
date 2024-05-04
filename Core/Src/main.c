@@ -80,8 +80,6 @@ static void MX_TIM4_Init(void);
 PollTimers pollTimers;
 
 Robot robot;
-Position position;
-ErrorFlag flag;
 
 RxCommsData rxCommsData;
 TxCommsData txCommsData;
@@ -89,28 +87,33 @@ TxCommsData txCommsData;
 
 static int16_t setVelocity = 0;
 
-float motor1Velocity;
-float motor2Velocity;
+float motorRightVelocity;
+float motorLeftVelocity;
 
 int16_t motorPosition;
-int16_t motor1PWM;
-int16_t motor2PWM;
+
+float xPos;
+float yPos;
+float angle;
+
 // call motorSetSpeed less often? - set proper nvic priorities so updateVelocity doesn't get interrupted by set speed
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim6) // update every 10ms
 	{
-//		motorUpdateVelocity(&(robot.motor1));
-//		motorRegulateVelocity(&(robot.motor1)); // keep setVelocity internal?
-		motorUpdateVelocity(&(robot.motor2));
-		motorRegulateVelocity(&(robot.motor2)); // keep setVelocity internal?
-		motorUpdateVelocity(&(robot.motor1));
-		motorRegulateVelocity(&(robot.motor1)); // keep setVelocity internal?
+		calculatePosition(&robot);
+		motorUpdateVelocity(&(robot.motorLeft));
+		motorRegulateVelocity(&(robot.motorLeft)); // keep setVelocity internal?
+		motorUpdateVelocity(&(robot.motorRight));
+		motorRegulateVelocity(&(robot.motorRight)); // keep setVelocity internal?
 
-		motor2Velocity = robot.motor2.rpm;
-		motor2PWM = robot.motor2.currentPWM;
-		motor1Velocity = robot.motor1.rpm;
-		motor1PWM = robot.motor1.currentPWM;
+		motorLeftVelocity = robot.motorLeft.rpm;
+		motorRightVelocity = robot.motorRight.rpm;
+
+		xPos = robot.position.x;
+		yPos = robot.position.y;
+		angle = RAD_TO_DEG * robot.position.ang;
+
 	}
 	if(htim == &htim4)
 	{
@@ -141,9 +144,9 @@ int line_append(uint8_t value)
 		if (line_length > 0) {
 			line_buffer[line_length] = '\0';
 			setVelocity = atoi((char*)line_buffer);
-			motorSetSpeed(&(robot.motor1), setVelocity);
-			motorSetSpeed(&(robot.motor2), setVelocity);
-			printf("Speed: %d\n", (int)robot.motor1.setRpm);
+			motorSetSpeed(&(robot.motorRight), setVelocity);
+			motorSetSpeed(&(robot.motorLeft), setVelocity);
+			printf("Speed: %d\n", (int)robot.motorRight.setRpm);
 			line_length = 0;
 			return setVelocity;
 		}
@@ -179,10 +182,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	position.x = 100;
-	position.x = -200;
-	position.ang = 123;
-	flag = 1;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -211,11 +211,13 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  initMotor(&(robot.motor1), &htim3, TIM_CHANNEL_1, &htim4, RIGHT);
-  initMotor(&(robot.motor2), &htim3, TIM_CHANNEL_2, &htim5, LEFT);
+  initMotor(&(robot.motorRight), &htim3, TIM_CHANNEL_1, &htim4, RIGHT);
+  initMotor(&(robot.motorLeft), &htim3, TIM_CHANNEL_2, &htim5, LEFT);
+
+  initRobot(&robot);
 
   initRxComms(&rxCommsData);
-  initTxComms(&txCommsData, &huart1, &position, &flag);
+  initTxComms(&txCommsData, &huart1, &(robot.position), &(robot.flag)); // pass only robot position and flag members (wrong way?)
 
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
@@ -235,8 +237,9 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 //  uint32_t tt = HAL_GetTick();
-  motorSetSpeed(&(robot.motor2), 0);
-  motorSetSpeed(&(robot.motor1), 0);
+
+  	  motorSetSpeed(&(robot.motorLeft), 0);
+  	  motorSetSpeed(&(robot.motorRight), 0);
 
   //  static uint16_t lastEncoderValue = 0;
 
@@ -251,7 +254,7 @@ int main(void)
 
 //	  if(HAL_GetTick() - tt > 5000)
 //	  {
-//		  pid_reset(&(robot.motor1.pid_controller));
+//		  pid_reset(&(robot.motorRight.pid_controller));
 //
 //		  setVelocity = -setVelocity;
 //		  tt = HAL_GetTick();
@@ -405,7 +408,7 @@ static void MX_TIM4_Init(void)
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 0;
+  sConfig.IC1Filter = 10;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
