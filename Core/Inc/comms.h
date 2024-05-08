@@ -21,10 +21,6 @@
 #define CRC_POLYNOMIAL 0x1021 // Standard CRC-16-ANSI polynomial
 
 typedef struct{
-	uint32_t lastTx;
-}PollTimers;
-
-typedef struct{
 	uint8_t handleIncomingData;
 	uint8_t dataSize;
 	uint8_t RxBuf[RxBuf_SIZE];

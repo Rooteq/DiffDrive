@@ -13,6 +13,10 @@ void initRobot(Robot* robot)
 	robot->position.x = 0;
 	robot->position.y = 0;
 	robot->position.ang = 0; // make it start as magnetometer direction? hybrid?
+
+	robot->goToPoint = false;
+	robot->destination.xd = 0;
+	robot->destination.yd = 0;
 }
 
 void calculatePosition(Robot* robot) // perhaps store last motor position
@@ -24,4 +28,49 @@ void calculatePosition(Robot* robot) // perhaps store last motor position
 	robot->position.x = robot->position.x + (SAMPLING_PERIOD * ((R/2.0) * cos(robot->position.ang) * (rightSpeed + leftSpeed)));
 	robot->position.y = robot->position.y + (SAMPLING_PERIOD * ((R/2.0) * sin(robot->position.ang) * (rightSpeed + leftSpeed)));
 	robot->position.ang = robot->position.ang + (SAMPLING_PERIOD * ((R/(2.0*B)) * (rightSpeed - leftSpeed)));
+}
+
+void beginPositionControl(Robot* robot, int16_t x, int16_t y)
+{
+	robot->destination.xd = x;
+	robot->destination.yd = y;
+
+	robot->goToPoint = true;
+}
+
+void pathPlanner(Robot* robot, PollTimers *timer)
+{
+	if(robot->goToPoint == false) // do not proceed when not in goToPoint mode
+		return;
+
+	if(HAL_GetTick() - timer->lastPathPlan > 50) // TODO: look into time
+	{
+		float dAng = atan2((float)robot->destination.yd - robot->position.y, (float)robot->destination.xd - robot->position.x);
+
+		float w = (float)KW * (dAng - robot->position.ang);
+		float v = (float)KV*(sqrt(pow(((float)robot->destination.xd - robot->position.x),2)+pow(((float)robot->destination.yd - robot->position.y),2)));
+
+		robot->w = w;
+		robot->v = v;
+
+		float lWheelSpeed = (1/(float)R)*v - ((float)B*2.0)/(2.0*(float)R)*w;
+		float rWheelSpeed = (1/(float)R)*v + ((float)B*2.0)/(2.0*(float)R)*w;
+
+		if(lWheelSpeed > 15) // clamping
+			lWheelSpeed = 15;
+		if(lWheelSpeed < -15)
+			lWheelSpeed = -15;
+
+		if(rWheelSpeed > 15)
+			rWheelSpeed = 15;
+		if(rWheelSpeed < -15)
+			rWheelSpeed = -15;
+
+		motorContinousSetSpeed(&(robot->motorLeft), lWheelSpeed);
+		motorContinousSetSpeed(&(robot->motorRight), rWheelSpeed);
+
+		timer->lastPathPlan = HAL_GetTick();
+	}
+
+
 }

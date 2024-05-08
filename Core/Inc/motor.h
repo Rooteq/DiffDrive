@@ -63,6 +63,9 @@ void motorUpdateVelocity(MotorInstance* motor);
 void initMotor(MotorInstance* motor, TIM_HandleTypeDef *motorHtim, uint8_t motorChannel, TIM_HandleTypeDef *encoderHtim, MotorSide side);
 void motorRegulateVelocity(MotorInstance* motor);
 void motorSetSpeed(MotorInstance* motor, float setRpm);
+
+void motorContinousSetSpeed(MotorInstance* motor, float setRpm);
+
 void motorSetDirection(MotorInstance* motor, MotorDirection direction);
 
 #endif /* INC_MOTOR_H_ */

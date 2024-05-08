@@ -243,6 +243,8 @@ int main(void)
 
   //  static uint16_t lastEncoderValue = 0;
 
+  	  //beginPositionControl(&robot, 200, 200);
+
   while (1)
   {
     /* USER CODE END WHILE */
@@ -252,6 +254,7 @@ int main(void)
 	  handleRx(&rxCommsData, &robot); // pass robot? then set the speed in separate function here
 	  handleTx(&txCommsData, &pollTimers); // make pollTimers internal? call it on interrupts?
 
+	  pathPlanner(&robot, &pollTimers);
 //	  if(HAL_GetTick() - tt > 5000)
 //	  {
 //		  pid_reset(&(robot.motorRight.pid_controller));

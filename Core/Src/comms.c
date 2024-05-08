@@ -7,9 +7,10 @@
 
 #include "comms.h"
 
-void initPollTimers(PollTimers* timers)
+void initPollTimers(PollTimers* timers) // TODO: take it somewhere else
 {
 	timers->lastTx = HAL_GetTick();
+	timers->lastPathPlan = HAL_GetTick();
 }
 
 
@@ -61,11 +62,12 @@ void UARTSendPos(TxCommsData* txCommsData)
     tx_buffer[8] = (uint8_t)((crc >> 8) & 0xFF);
 
     tx_buffer[10] = END_BYTE;
-    HAL_UART_Transmit_IT(txCommsData->huart, tx_buffer, sizeof(tx_buffer)); // handle buffer overflow?
+    HAL_UART_Transmit_IT(txCommsData->huart, tx_buffer, sizeof(tx_buffer));
 }
 
 void handleCommand(RxCommsData* rxCommsData, Robot* robot)
 {
+	robot->goToPoint = false;
 	switch(rxCommsData->MainBuf[1])
 	{
 	case 'F':

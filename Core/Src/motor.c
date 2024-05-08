@@ -120,6 +120,25 @@ void motorSetSpeed(MotorInstance* motor, float setRpm)
 	}
 }
 
+void motorContinousSetSpeed(MotorInstance* motor, float setRpm)
+{
+	if(setRpm == 0)
+	{
+		motor->stop = true;
+		motor->setRpm = setRpm;
+		motor->currentPWM = 0; // very important - without it, it sometimes isnt 0
+
+		return;
+	}
+
+	if(motor->setRpm != setRpm)
+	{
+		motor->stop = false;
+		motor->setRpm = setRpm;
+	}
+}
+
+
 void motorSetDirection(MotorInstance* motor, MotorDirection direction)
 {
 	if(direction == STOP)
