@@ -17,6 +17,8 @@ void initRobot(Robot* robot)
 	robot->goToPoint = false;
 	robot->destination.xd = 0;
 	robot->destination.yd = 0;
+	robot->destination.totalDistanceError = 0;
+	robot->destination.totalAngleError = 0;
 }
 
 void calculatePosition(Robot* robot) // perhaps store last motor position
@@ -34,6 +36,8 @@ void beginPositionControl(Robot* robot, int16_t x, int16_t y)
 {
 	robot->destination.xd = x;
 	robot->destination.yd = y;
+	robot->destination.totalDistanceError = 0;
+	robot->destination.totalAngleError = 0;
 
 	robot->goToPoint = true;
 }
@@ -45,10 +49,31 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 
 	if(HAL_GetTick() - timer->lastPathPlan > 50) // TODO: look into time
 	{
-		float dAng = atan2((float)robot->destination.yd - robot->position.y, (float)robot->destination.xd - robot->position.x);
+		if((fabsf((float)robot->destination.yd - robot->position.y) < 1) && (fabsf((float)robot->destination.xd - robot->position.x) < 1))
+		{
+			motorSetSpeed(&(robot->motorLeft), 0);
+			motorSetSpeed(&(robot->motorRight), 0);
+			robot->goToPoint = false;
+			return;
+		}
 
-		float w = (float)KW * (dAng - robot->position.ang);
-		float v = (float)KV*(sqrt(pow(((float)robot->destination.xd - robot->position.x),2)+pow(((float)robot->destination.yd - robot->position.y),2)));
+		float dAng = atan2((float)robot->destination.yd - robot->position.y, (float)robot->destination.xd - robot->position.x);
+		float ang = (dAng - robot->position.ang);
+
+		robot->destination.totalAngleError += ang;
+
+		float pATerm = (float)KW * ang; // proportional angle term
+		float iATerm = (float)IW * robot->destination.totalAngleError * 0.05;
+		float w = pATerm + iATerm; // + iATerm
+
+		float distance = sqrt(pow(((float)robot->destination.xd - robot->position.x),2)+pow(((float)robot->destination.yd - robot->position.y),2));
+
+		robot->destination.totalDistanceError += distance;
+
+		float pVTerm = (float)KV * distance;
+		float iVTerm = (float)IV * robot->destination.totalDistanceError * 0.05;
+
+		float v = pVTerm + iVTerm;
 
 		robot->w = w;
 		robot->v = v;
@@ -56,15 +81,15 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 		float lWheelSpeed = (1/(float)R)*v - ((float)B*2.0)/(2.0*(float)R)*w;
 		float rWheelSpeed = (1/(float)R)*v + ((float)B*2.0)/(2.0*(float)R)*w;
 
-		if(lWheelSpeed > 15) // clamping
-			lWheelSpeed = 15;
-		if(lWheelSpeed < -15)
-			lWheelSpeed = -15;
+		if(lWheelSpeed > 10) // clamping
+			lWheelSpeed = 10;
+		if(lWheelSpeed < -10)
+			lWheelSpeed = -10;
 
-		if(rWheelSpeed > 15)
-			rWheelSpeed = 15;
-		if(rWheelSpeed < -15)
-			rWheelSpeed = -15;
+		if(rWheelSpeed > 10)
+			rWheelSpeed = 10;
+		if(rWheelSpeed < -10)
+			rWheelSpeed = -10;
 
 		motorContinousSetSpeed(&(robot->motorLeft), lWheelSpeed);
 		motorContinousSetSpeed(&(robot->motorRight), rWheelSpeed);

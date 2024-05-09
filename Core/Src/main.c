@@ -243,7 +243,7 @@ int main(void)
 
   //  static uint16_t lastEncoderValue = 0;
 
-  	  //beginPositionControl(&robot, 200, 200);
+  	  beginPositionControl(&robot, 200, 200);
 
   while (1)
   {

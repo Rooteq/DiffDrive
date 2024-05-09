@@ -15,7 +15,10 @@
 #define B 85 // TODO: make it more precise
 
 #define KW 5 // TODO: tune
-#define KV 0.8
+#define IW 0.04
+
+#define KV 1.7
+#define IV 0.04
 
 typedef struct{
 	uint32_t lastTx;
@@ -27,6 +30,8 @@ typedef uint8_t ErrorFlag;
 typedef struct{
 	int16_t xd; // perhaps float?
 	int16_t yd;
+	float totalDistanceError;
+	float totalAngleError;
 }Destination;
 
 typedef struct{
