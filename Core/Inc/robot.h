@@ -25,7 +25,7 @@ typedef struct{
 	uint32_t lastPathPlan;
 }PollTimers;
 
-typedef uint8_t ErrorFlag;
+typedef uint8_t StateFlag; //
 
 typedef struct{
 	int16_t xd; // perhaps float?
@@ -48,7 +48,7 @@ typedef struct
 	MotorInstance motorRight;
 	MotorInstance motorLeft;
 
-	ErrorFlag flag;
+	StateFlag flag;
 	Position position;
 
 	bool goToPoint;

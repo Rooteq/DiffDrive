@@ -71,7 +71,14 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 		robot->destination.totalDistanceError += distance;
 
 		float pVTerm = (float)KV * distance;
+
+		if(pVTerm > 100)
+			pVTerm = 100;
+
 		float iVTerm = (float)IV * robot->destination.totalDistanceError * 0.05;
+
+		if(iVTerm > 100)
+			iVTerm = 100;
 
 		float v = pVTerm + iVTerm;
 

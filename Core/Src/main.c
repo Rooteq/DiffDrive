@@ -243,7 +243,7 @@ int main(void)
 
   //  static uint16_t lastEncoderValue = 0;
 
-  	  beginPositionControl(&robot, 200, 200);
+  	  //beginPositionControl(&robot, 200, 200);
 
   while (1)
   {
@@ -251,21 +251,10 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	  handleRx(&rxCommsData, &robot); // pass robot? then set the speed in separate function here
-	  handleTx(&txCommsData, &pollTimers); // make pollTimers internal? call it on interrupts?
+	  handleRx(&rxCommsData, &robot);
+	  handleTx(&txCommsData, &pollTimers);
 
 	  pathPlanner(&robot, &pollTimers);
-//	  if(HAL_GetTick() - tt > 5000)
-//	  {
-//		  pid_reset(&(robot.motorRight.pid_controller));
-//
-//		  setVelocity = -setVelocity;
-//		  tt = HAL_GetTick();
-//	  }
-
-	  uint8_t value;
-	  if (HAL_UART_Receive(&huart2, &value, 1, 0) == HAL_OK) // only temporary for setting speed
-		  line_append(value);
   }
   /* USER CODE END 3 */
 }

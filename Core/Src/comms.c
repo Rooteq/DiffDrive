@@ -13,20 +13,18 @@ void initPollTimers(PollTimers* timers) // TODO: take it somewhere else
 	timers->lastPathPlan = HAL_GetTick();
 }
 
-
 void initRxComms(RxCommsData* rxCommsData)
 {
 	rxCommsData->handleIncomingData = 0;
 	rxCommsData->dataSize = 0;
 }
 
-void initTxComms(TxCommsData* txCommsData, UART_HandleTypeDef *huart, Position* pos, ErrorFlag *flag)
+void initTxComms(TxCommsData* txCommsData, UART_HandleTypeDef *huart, Position* pos, StateFlag *flag)
 {
 	txCommsData->huart = huart;
 	txCommsData->flag = flag;
 	txCommsData->pos = pos;
 }
-
 
 void int16_to_bytes(int16_t value, uint8_t *buffer) {
     buffer[1] = (uint8_t)(value & 0xFF);
@@ -100,23 +98,39 @@ void handleCommand(RxCommsData* rxCommsData, Robot* robot)
 	}
 }
 
+void handleDestinationCommand(RxCommsData* rxCommsData, Robot* robot)
+{
+	if(crc16(&(rxCommsData->MainBuf[1]), 6) == 0)
+	{
+	    int16_t tmpX = (int16_t)((rxCommsData->MainBuf[1] << 8) | rxCommsData->MainBuf[2]);
+	    int16_t tmpY = (int16_t)((rxCommsData->MainBuf[3] << 8) | rxCommsData->MainBuf[4]);
 
+	    robot->destination.xd = tmpX;
+	    robot->destination.yd = tmpY;
+
+	    beginPositionControl(robot, tmpX, tmpY);
+	}
+}
 
 void handleRx(RxCommsData* rxCommsData, Robot* robot) // pass internal state as argument so that it could do something xdd
 {
 	if(rxCommsData->handleIncomingData == 1)
 	{
-		if(rxCommsData->dataSize == 2) // change to more lolz - add crc etc
+		if(rxCommsData->dataSize == 2)
 		{
 			handleCommand(rxCommsData, robot);
 		}
-//		else if(dataSize == ) // handle position
+		else if(rxCommsData->dataSize == 8) // {p11|p12|p21|p22|crc1|crc2|}
+		{
+			handleDestinationCommand(rxCommsData, robot);
+		}
+
 		rxCommsData->handleIncomingData = 0;
 	}
 }
 
 void handleTx(TxCommsData* txCommsData, PollTimers* pollTimers)
-{// make pollTimers internal? call it on interrupts?
+{
 	if(HAL_GetTick() - pollTimers->lastTx > 1000)
 	{
 		UARTSendPos(txCommsData);

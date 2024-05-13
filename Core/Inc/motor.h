@@ -22,13 +22,13 @@ typedef enum
 	FORWARDS = 0,
 	BACKWARDS = 1,
 	STOP = 2
-}MotorDirection;
+} MotorDirection;
 
 typedef enum
 {
 	LEFT = 0,
 	RIGHT = 1
-}MotorSide;
+} MotorSide;
 
 // TODO: Sample the encoders every miliseconds from sysTick!!!
 
@@ -38,7 +38,7 @@ typedef struct{
 	TIM_HandleTypeDef *encoderHtim;
 	// channel
 
-}EncoderInstance; // change encoder for motor?
+} EncoderInstance; // change encoder for motor?
 
 
 typedef struct

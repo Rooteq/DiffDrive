@@ -31,20 +31,22 @@ typedef struct{
 typedef struct{
 	UART_HandleTypeDef *huart;
 	Position* pos;
-	ErrorFlag *flag;
+	StateFlag *flag;
 } TxCommsData;
 
 
 void initPollTimers(PollTimers* timers);
 
 void initRxComms(RxCommsData* rxCommsData);
-void initTxComms(TxCommsData* txCommsData, UART_HandleTypeDef *huart, Position* pos, ErrorFlag *flag);
+void initTxComms(TxCommsData* txCommsData, UART_HandleTypeDef *huart, Position* pos, StateFlag *flag);
 
 void int16_to_bytes(int16_t value, uint8_t *buffer);
 uint16_t crc16(const uint8_t* data_p, uint8_t length);
 void UARTSendPos(TxCommsData* txCommsData);
 
 void handleCommand(RxCommsData* rxCommsData, Robot* robot);
+void handleDestinationCommand(RxCommsData* rxCommsData, Robot* robot);
+
 
 void handleRx(RxCommsData* rxCommsData, Robot* robot);
 void handleTx(TxCommsData* txCommsData, PollTimers* pollTimers); // make pollTimers internal? call it on interrupts?
