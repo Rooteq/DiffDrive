@@ -70,28 +70,33 @@ void handleCommand(RxCommsData* rxCommsData, Robot* robot)
 	{
 	case 'F':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		motorSetSpeed(&(robot->motorRight), 10);
-		motorSetSpeed(&(robot->motorLeft), 10);
+		setStateFlag(robot, MANUAL_MOVE);
+		motorSetConstSpeed(&(robot->motorRight), 12);
+		motorSetConstSpeed(&(robot->motorLeft), 12);
 		break;
 	case 'B':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		motorSetSpeed(&(robot->motorRight), -10);
-		motorSetSpeed(&(robot->motorLeft), -10);
+		setStateFlag(robot, MANUAL_MOVE);
+		motorSetConstSpeed(&(robot->motorRight), -12);
+		motorSetConstSpeed(&(robot->motorLeft), -12);
 		break;
 	case 'L':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		motorSetSpeed(&(robot->motorRight), 10);
-		motorSetSpeed(&(robot->motorLeft), -10);
+		setStateFlag(robot, MANUAL_MOVE);
+		motorSetConstSpeed(&(robot->motorRight), 10);
+		motorSetConstSpeed(&(robot->motorLeft), -10);
 		break;
 	case 'R':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		motorSetSpeed(&(robot->motorRight), -10);
-		motorSetSpeed(&(robot->motorLeft), 10);
+		setStateFlag(robot, MANUAL_MOVE);
+		motorSetConstSpeed(&(robot->motorRight), -10);
+		motorSetConstSpeed(&(robot->motorLeft), 10);
 		break;
 	case 'S':
 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-		motorSetSpeed(&(robot->motorRight), 0);
-		motorSetSpeed(&(robot->motorLeft), 0);
+		setStateFlag(robot, STOPPED);
+		motorSetConstSpeed(&(robot->motorRight), 0);
+		motorSetConstSpeed(&(robot->motorLeft), 0);
 		break;
 	default:
 		break;

@@ -77,90 +77,27 @@ static void MX_TIM4_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-PollTimers pollTimers;
-
-Robot robot;
-
-RxCommsData rxCommsData;
+Robot robot; // main robot instance
+RxCommsData rxCommsData; // rx comms data
 TxCommsData txCommsData;
+PollTimers pollTimers; // some timers used for polling
 
-
-static int16_t setVelocity = 0;
-
-float motorRightVelocity;
-float motorLeftVelocity;
-
-int16_t motorPosition;
-
-float xPos;
-float yPos;
-float angle;
-
-// call motorSetSpeed less often? - set proper nvic priorities so updateVelocity doesn't get interrupted by set speed
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim6) // update every 10ms
 	{
-		calculatePosition(&robot);
+		calculatePosition(&robot); // calculate position at the beggining - it uses previous state vector
+
 		motorUpdateVelocity(&(robot.motorLeft));
-		motorRegulateVelocity(&(robot.motorLeft)); // keep setVelocity internal?
+		motorRegulateVelocity(&(robot.motorLeft));
 		motorUpdateVelocity(&(robot.motorRight));
-		motorRegulateVelocity(&(robot.motorRight)); // keep setVelocity internal?
-
-		motorLeftVelocity = robot.motorLeft.rpm;
-		motorRightVelocity = robot.motorRight.rpm;
-
-		xPos = robot.position.x;
-		yPos = robot.position.y;
-		angle = RAD_TO_DEG * robot.position.ang;
-
+		motorRegulateVelocity(&(robot.motorRight));
 	}
-	if(htim == &htim4)
+	if(htim == &htim4) // DEPRECATED, can use timer for something else
 	{
-		// wheel revolution, deprecated
-		//HAL_UART_Transmit_IT(&huart2, (uint8_t*)&mes, sizeof(mes));
+
 	}
 }
-
-int __io_putchar(int ch)
-{
-  if (ch == '\n') {
-    __io_putchar('\r');
-  }
-
-  HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
-
-  return 1;
-}
-
-#define LINE_MAX_LENGTH 80
-
-static char line_buffer[LINE_MAX_LENGTH + 1];
-static uint32_t line_length;
-
-int line_append(uint8_t value)
-{
-	if (value == '\r' || value == '\n') {
-		if (line_length > 0) {
-			line_buffer[line_length] = '\0';
-			setVelocity = atoi((char*)line_buffer);
-			motorSetSpeed(&(robot.motorRight), setVelocity);
-			motorSetSpeed(&(robot.motorLeft), setVelocity);
-			printf("Speed: %d\n", (int)robot.motorRight.setRpm);
-			line_length = 0;
-			return setVelocity;
-		}
-	}
-	else {
-		if (line_length >= LINE_MAX_LENGTH) {
-			line_length = 0;
-		}
-		line_buffer[line_length++] = value;
-	}
-	return 0;
-}
-
-// --------- COMMS FUNCTIONS --------------
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
@@ -211,13 +148,14 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  initMotor(&(robot.motorRight), &htim3, TIM_CHANNEL_1, &htim4, RIGHT);
+
+  initMotor(&(robot.motorRight), &htim3, TIM_CHANNEL_1, &htim4, RIGHT); // TODO: move motor initialization to robot initialization
   initMotor(&(robot.motorLeft), &htim3, TIM_CHANNEL_2, &htim5, LEFT);
 
   initRobot(&robot);
 
   initRxComms(&rxCommsData);
-  initTxComms(&txCommsData, &huart1, &(robot.position), &(robot.flag)); // pass only robot position and flag members (wrong way?)
+  initTxComms(&txCommsData, &huart1, &(robot.position), &(robot.flag));
 
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
@@ -236,24 +174,17 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-//  uint32_t tt = HAL_GetTick();
 
-  	  motorSetSpeed(&(robot.motorLeft), 0);
-  	  motorSetSpeed(&(robot.motorRight), 0);
-
-  //  static uint16_t lastEncoderValue = 0;
-
-  	  //beginPositionControl(&robot, 200, 200);
+  motorSetConstSpeed(&(robot.motorLeft), 0); // TODO: move to init
+  motorSetConstSpeed(&(robot.motorRight), 0);
 
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
 	  handleRx(&rxCommsData, &robot);
 	  handleTx(&txCommsData, &pollTimers);
-
 	  pathPlanner(&robot, &pollTimers);
   }
   /* USER CODE END 3 */

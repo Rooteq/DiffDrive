@@ -101,14 +101,13 @@ void motorRegulateVelocity(MotorInstance* motor)
 	}
 }
 
-void motorSetSpeed(MotorInstance* motor, float setRpm)
+void motorSetConstSpeed(MotorInstance* motor, float setRpm)
 {
 	if(setRpm == 0)
 	{
 		motor->stop = true;
 		motor->setRpm = setRpm;
-		motor->currentPWM = 0; // very important - without it, it sometimes isnt 0
-
+		motor->currentPWM = 0; // very important, without it not always pulls to 0
 		return;
 	}
 
@@ -127,7 +126,6 @@ void motorContinousSetSpeed(MotorInstance* motor, float setRpm)
 		motor->stop = true;
 		motor->setRpm = setRpm;
 		motor->currentPWM = 0; // very important - without it, it sometimes isnt 0
-
 		return;
 	}
 

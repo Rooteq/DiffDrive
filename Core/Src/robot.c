@@ -9,7 +9,7 @@
 
 void initRobot(Robot* robot)
 {
-	robot->flag = 1;
+	setStateFlag(robot, STOPPED);
 	robot->position.x = 0;
 	robot->position.y = 0;
 	robot->position.ang = 0; // make it start as magnetometer direction? hybrid?
@@ -47,12 +47,13 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 	if(robot->goToPoint == false) // do not proceed when not in goToPoint mode
 		return;
 
+	setStateFlag(robot, AUTO_MOVE);
 	if(HAL_GetTick() - timer->lastPathPlan > 50) // TODO: look into time
 	{
 		if((fabsf((float)robot->destination.yd - robot->position.y) < 1) && (fabsf((float)robot->destination.xd - robot->position.x) < 1))
 		{
-			motorSetSpeed(&(robot->motorLeft), 0);
-			motorSetSpeed(&(robot->motorRight), 0);
+			motorSetConstSpeed(&(robot->motorLeft), 0);
+			motorSetConstSpeed(&(robot->motorRight), 0);
 			robot->goToPoint = false;
 			return;
 		}
@@ -106,3 +107,24 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 
 
 }
+
+void setStateFlag(Robot* robot, InternalState state)
+{
+	switch (state) {
+		case STOPPED:
+			robot->flag = 0x03;
+			break;
+		case MANUAL_MOVE:
+			robot->flag = 0x05;
+			break;
+		case AUTO_MOVE:
+			robot->flag = 0x09;
+			break;
+		default:
+			break;
+	}
+
+	// if obstacle use or to add obstacle flag
+	// make obstacle as a global variable - flag should only source
+}
+

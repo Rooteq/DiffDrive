@@ -20,6 +20,13 @@
 #define KV 1.7
 #define IV 0.04
 
+typedef enum
+{
+	STOPPED = 0,
+	MANUAL_MOVE = 1,
+	AUTO_MOVE = 2
+} InternalState;
+
 typedef struct{
 	uint32_t lastTx;
 	uint32_t lastPathPlan;
@@ -60,5 +67,7 @@ void calculatePosition(Robot* robot);
 
 void beginPositionControl(Robot* robot, int16_t x, int16_t y);
 void pathPlanner(Robot* robot, PollTimers *timer);
+
+void setStateFlag(Robot* robot, InternalState state);
 
 #endif /* INC_ROBOT_H_ */

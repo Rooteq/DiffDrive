@@ -57,12 +57,12 @@ typedef struct
 	uint8_t motorChannel;
 
 	bool stop;
-}MotorInstance;
+} MotorInstance;
 
 void motorUpdateVelocity(MotorInstance* motor);
 void initMotor(MotorInstance* motor, TIM_HandleTypeDef *motorHtim, uint8_t motorChannel, TIM_HandleTypeDef *encoderHtim, MotorSide side);
 void motorRegulateVelocity(MotorInstance* motor);
-void motorSetSpeed(MotorInstance* motor, float setRpm);
+void motorSetConstSpeed(MotorInstance* motor, float setRpm);
 
 void motorContinousSetSpeed(MotorInstance* motor, float setRpm);
 
