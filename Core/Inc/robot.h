@@ -24,12 +24,15 @@ typedef enum
 {
 	STOPPED = 0,
 	MANUAL_MOVE = 1,
-	AUTO_MOVE = 2
+	AUTO_MOVE = 2,
+	SET_OBSTACLE = 3,
+	RESET_OBSTACLE = 4
 } InternalState;
 
 typedef struct{
 	uint32_t lastTx;
 	uint32_t lastPathPlan;
+	uint32_t lastRadarPoll;
 }PollTimers;
 
 typedef uint8_t StateFlag; //
@@ -57,6 +60,9 @@ typedef struct
 
 	StateFlag flag;
 	Position position;
+
+	uint8_t obstacleProximity;
+	bool stopForObstacle;
 
 	bool goToPoint;
 	Destination destination;

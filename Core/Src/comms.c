@@ -7,10 +7,11 @@
 
 #include "comms.h"
 
-void initPollTimers(PollTimers* timers) // TODO: take it somewhere else
+void initPollTimers(PollTimers* timers) // TODO: move it to robot file
 {
 	timers->lastTx = HAL_GetTick();
 	timers->lastPathPlan = HAL_GetTick();
+	timers->lastRadarPoll = HAL_GetTick();
 }
 
 void initRxComms(RxCommsData* rxCommsData)

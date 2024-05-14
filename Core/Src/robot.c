@@ -12,16 +12,18 @@ void initRobot(Robot* robot)
 	setStateFlag(robot, STOPPED);
 	robot->position.x = 0;
 	robot->position.y = 0;
-	robot->position.ang = 0; // make it start as magnetometer direction? hybrid?
+	robot->position.ang = 0;
 
 	robot->goToPoint = false;
+	robot->stopForObstacle = false;
+
 	robot->destination.xd = 0;
 	robot->destination.yd = 0;
 	robot->destination.totalDistanceError = 0;
 	robot->destination.totalAngleError = 0;
 }
 
-void calculatePosition(Robot* robot) // perhaps store last motor position
+void calculatePosition(Robot* robot)
 {
 	// RHS is t-delta(t)
 	float leftSpeed = RPM_TO_RAD * robot->motorLeft.rpm;
@@ -108,7 +110,7 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 
 }
 
-void setStateFlag(Robot* robot, InternalState state)
+void setStateFlag(Robot* robot, InternalState state) // TODO change logic
 {
 	switch (state) {
 		case STOPPED:
@@ -120,8 +122,19 @@ void setStateFlag(Robot* robot, InternalState state)
 		case AUTO_MOVE:
 			robot->flag = 0x09;
 			break;
+		case SET_OBSTACLE:
+			robot->flag |= 0x10;
+			break;
+		case RESET_OBSTACLE:
+			robot->flag ^= 0x10;
+			break;
 		default:
 			break;
+	}
+
+	if(robot->stopForObstacle == true)
+	{
+		robot->flag |= 0x10;
 	}
 
 	// if obstacle use or to add obstacle flag
