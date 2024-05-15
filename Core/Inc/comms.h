@@ -15,7 +15,7 @@
 #define RxBuf_SIZE 10 // max message sizes
 #define MainBuf_SIZE 20
 
-#define POS_BUFFER_SIZE 11
+#define POS_BUFFER_SIZE 12
 #define START_BYTE 0xAA // Znacznik początku ramki
 #define END_BYTE 0x55   // Znacznik końca ramki
 #define CRC_POLYNOMIAL 0x1021 // Standard CRC-16-ANSI polynomial
@@ -32,13 +32,14 @@ typedef struct{
 	UART_HandleTypeDef *huart;
 	Position* pos;
 	StateFlag *flag;
+	uint8_t *obstacleDistance;
 } TxCommsData;
 
 
 void initPollTimers(PollTimers* timers);
 
 void initRxComms(RxCommsData* rxCommsData);
-void initTxComms(TxCommsData* txCommsData, UART_HandleTypeDef *huart, Position* pos, StateFlag *flag);
+void initTxComms(TxCommsData* txCommsData, UART_HandleTypeDef *huart, Position* pos, StateFlag *flag, uint8_t *obstacleDistance);
 
 void int16_to_bytes(int16_t value, uint8_t *buffer);
 uint16_t crc16(const uint8_t* data_p, uint8_t length);

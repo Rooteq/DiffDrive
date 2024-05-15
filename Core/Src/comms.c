@@ -20,11 +20,12 @@ void initRxComms(RxCommsData* rxCommsData)
 	rxCommsData->dataSize = 0;
 }
 
-void initTxComms(TxCommsData* txCommsData, UART_HandleTypeDef *huart, Position* pos, StateFlag *flag)
+void initTxComms(TxCommsData* txCommsData, UART_HandleTypeDef *huart, Position* pos, StateFlag *flag, uint8_t *obstacleDistance)
 {
 	txCommsData->huart = huart;
 	txCommsData->flag = flag;
 	txCommsData->pos = pos;
+	txCommsData->obstacleDistance = obstacleDistance;
 }
 
 void int16_to_bytes(int16_t value, uint8_t *buffer) {
@@ -56,11 +57,14 @@ void UARTSendPos(TxCommsData* txCommsData)
     int16_to_bytes((int16_t)txCommsData->pos->y, &tx_buffer[4]);
     int16_to_bytes((int16_t)(RAD_TO_DEG * txCommsData->pos->ang), &tx_buffer[6]);
 
-    uint16_t crc = crc16(&tx_buffer[1], 7);
-    tx_buffer[9] = (uint8_t)(crc & 0xFF);
-    tx_buffer[8] = (uint8_t)((crc >> 8) & 0xFF);
+    tx_buffer[8] = *(txCommsData->obstacleDistance); // always send distance to obstacle
 
-    tx_buffer[10] = END_BYTE;
+    uint16_t crc = crc16(&tx_buffer[1], 8);
+
+    tx_buffer[10] = (uint8_t)(crc & 0xFF);
+    tx_buffer[9] = (uint8_t)((crc >> 8) & 0xFF);
+
+    tx_buffer[11] = END_BYTE;
     HAL_UART_Transmit_IT(txCommsData->huart, tx_buffer, sizeof(tx_buffer));
 }
 

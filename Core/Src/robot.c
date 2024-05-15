@@ -25,7 +25,6 @@ void initRobot(Robot* robot)
 
 void calculatePosition(Robot* robot)
 {
-	// RHS is t-delta(t)
 	float leftSpeed = RPM_TO_RAD * robot->motorLeft.rpm;
 	float rightSpeed = RPM_TO_RAD * robot->motorRight.rpm;
 
@@ -50,7 +49,7 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 		return;
 
 	setStateFlag(robot, AUTO_MOVE);
-	if(HAL_GetTick() - timer->lastPathPlan > 50) // TODO: look into time
+	if(HAL_GetTick() - timer->lastPathPlan > 50)
 	{
 		if((fabsf((float)robot->destination.yd - robot->position.y) < 1) && (fabsf((float)robot->destination.xd - robot->position.x) < 1))
 		{

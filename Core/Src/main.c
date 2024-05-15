@@ -170,7 +170,7 @@ int main(void)
   initRobot(&robot);
 
   initRxComms(&rxCommsData);
-  initTxComms(&txCommsData, &huart1, &(robot.position), &(robot.flag));
+  initTxComms(&txCommsData, &huart1, &(robot.position), &(robot.flag), &(robot.obstacleProximity));
 
   HAL_TIM_IC_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_IC_Start(&htim2, TIM_CHANNEL_2);
