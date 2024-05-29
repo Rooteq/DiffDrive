@@ -89,7 +89,8 @@ TxCommsData txCommsData;
 PollTimers pollTimers; // some timers used for polling
 
 float w;
-float ax,ay,az;
+float ax,ay;
+float az;
 
 int __io_putchar(int ch)
 {
@@ -106,11 +107,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim6) // update every 10ms
 	{
-		w = MPU6050_GetRotationScaled();
-
 		calculatePosition(&robot); // calculate position at the beggining - it uses previous state vector
 
-		motorUpdateVelocity(&(robot.motorLeft));
+		motorUpdateVelocity(&(robot.motorLeft)); // was after calculate position
 		motorRegulateVelocity(&(robot.motorLeft));
 		motorUpdateVelocity(&(robot.motorRight));
 		motorRegulateVelocity(&(robot.motorRight));
@@ -213,7 +212,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
+	  readImu(&robot);
 	  readRadar(&robot, &pollTimers, &htim2);
 	  pathPlanner(&robot, &pollTimers);
 

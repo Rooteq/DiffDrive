@@ -23,6 +23,8 @@
 #define MPU6050_RA_ACCEL_CONFIG     0x1C
 #define MPU6050_RA_GYRO_XOUT_H      0x43
 #define MPU6050_RA_GYRO_ZOUT_H      0x47
+#define MPU6050_RA_ACCEL_XOUT_H     0x3B
+#define MPU6050_RA_ACCEL_ZOUT_H     0x3F
 
 #define MPU6050_PWR1_DEVICE_RESET_BIT   7
 
@@ -33,17 +35,18 @@ void MPU6050_SetClockSource(uint8_t Source);
 void MPU6050_SetDlpf(uint8_t Value);
 
 void readRadar(Robot* robot, PollTimers* timers, TIM_HandleTypeDef *sensorTimer);
+void readImu(Robot* robot);
+
 void MPU6050_SetIntEnableRegister(uint8_t Value);
 
 void MPU6050_SetFullScaleGyroRange(uint8_t Range);
 void MPU6050_SetFullScaleAccelRange(uint8_t Range);
 
-float MPU6050_GetRotationScaled(void);
+void MPU6050_GetRotationScaled(float* w);
 
-int16_t MPU6050_GetAccelerationXRAW(void);
-int16_t MPU6050_GetAccelerationYRAW(void);
-int16_t MPU6050_GetAccelerationZRAW(void);
-void MPU6050_GetAccelerometerRAW(int16_t* x, int16_t* y, int16_t* z);
-void MPU6050_GetAccelerometerScaled(float* x, float* y, float* z);
+float MPU6050_GetAccelerationZ(void);
+
+void MPU6050_GetAccelerometerRAW(int16_t* x, int16_t* y);
+void MPU6050_GetAccelerometerScaled(float* x, float* y);
 
 #endif /* INC_SENSORS_H_ */

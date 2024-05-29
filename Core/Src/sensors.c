@@ -1,7 +1,7 @@
 #include "sensors.h"
 #include "math.h"
 
-#define I2C_TIMEOUT 10
+#define I2C_TIMEOUT 50
 
 I2C_HandleTypeDef *i2c;
 float Acc_Scale;
@@ -117,7 +117,9 @@ void MPU6050_SetFullScaleAccelRange(uint8_t Range)
 	switch(Range)
 	{
 		case MPU6050_ACCEL_FS_2:
-			Acc_Scale = 0.000061;
+			//Acc_Scale = 0.000061; // [g]
+//			Acc_Scale = 0.0005982; //[m/s^2]
+			Acc_Scale = 0.5982; //[mm/s^2]
 			break;
 //		case MPU6050_ACCEL_FS_4:
 //			Acc_Scale = 0.000122;
@@ -132,29 +134,45 @@ void MPU6050_SetFullScaleAccelRange(uint8_t Range)
 			break;
 	}
 }
-float MPU6050_GetRotationScaled(void)
+void MPU6050_GetRotationScaled(float* w)
 {
 	uint8_t tmp[2];
+	//HAL_I2C_Mem_Read_IT(i2c, MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, 1, tmp, 2);
 	HAL_I2C_Mem_Read(i2c, MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, 1, tmp, 2, I2C_TIMEOUT);
 
 	int16_t val = ((((int16_t)tmp[0]) << 8) | tmp[1]);
-	return (float)val*0.00013322-0.021; // offset?
+	*w = (float)val*0.00013322-0.021; // offset?
 }
 
+float MPU6050_GetAccelerationZ(void)
+{
+	uint8_t tmp[2];
+	HAL_I2C_Mem_Read(i2c, MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_H, 1, tmp, 2, I2C_TIMEOUT);
+	int16_t val = (((int16_t)tmp[0]) << 8) | tmp[1];
+	return (float)val * 0.0005982;
+}
 
-//void MPU6050_GetGyroscopeRAW(int16_t *w)
-//{
-//	uint8_t tmp[6];
-//	HAL_I2C_Mem_Read(i2c, MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, 1, tmp, 6, I2C_TIMEOUT);
-//
-//	*w = (((int16_t)tmp[4]) << 8) | tmp[5];
-//}
-//
-//void MPU6050_GetGyroscopeScaled(float* w)
-//{
-//	int16_t tmp_w;
-//
-//	MPU6050_GetGyroscopeRAW(&tmp_w);
-//
-//	*w = (float)tmp_w * Gyr_Scale;
-//}
+void MPU6050_GetAccelerometerRAW(int16_t *x, int16_t *y)
+{
+	uint8_t tmp[6];
+	HAL_I2C_Mem_Read(i2c, MPU6050_ADDRESS, MPU6050_RA_ACCEL_XOUT_H, 1, tmp, 6, I2C_TIMEOUT);
+
+	*x = (((int16_t)tmp[0]) << 8) | tmp[1];
+	*y = (((int16_t)tmp[2]) << 8) | tmp[3];
+}
+
+void MPU6050_GetAccelerometerScaled(float* x, float* y)
+{
+	int16_t tmp_x, tmp_y;
+	MPU6050_GetAccelerometerRAW(&tmp_x, &tmp_y);
+
+	*x = (float)tmp_x * Acc_Scale  - 190;
+	*y = (float)tmp_y * Acc_Scale + 330;
+}
+
+void readImu(Robot* robot)
+{
+	MPU6050_GetRotationScaled(&(robot->imuReadings.w));
+	//MPU6050_GetAccelerometerScaled(&(robot->imuReadings.ax), &(robot->imuReadings.ay));
+}
+

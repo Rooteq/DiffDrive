@@ -50,16 +50,28 @@ typedef struct{
 	  float ang;
 } Position;
 
+typedef struct{
+	float w;
+	float ax;
+	float ay;
+
+	float vxGlobal;
+	float vyGlobal;
+}ImuReadings;
+
 typedef struct
 {
 	float w;
 	float v;
+
+	ImuReadings imuReadings;
 
 	MotorInstance motorRight;
 	MotorInstance motorLeft;
 
 	StateFlag flag;
 	Position position;
+	Position encoderCalculatedPosition;
 
 	uint8_t obstacleProximity;
 	bool stopForObstacle;

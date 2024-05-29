@@ -14,6 +14,10 @@ void initRobot(Robot* robot)
 	robot->position.y = 0;
 	robot->position.ang = 0;
 
+	robot->encoderCalculatedPosition.x = 0;
+	robot->encoderCalculatedPosition.y = 0;
+	robot->encoderCalculatedPosition.ang = 0;
+
 	robot->goToPoint = false;
 	robot->stopForObstacle = false;
 
@@ -21,6 +25,12 @@ void initRobot(Robot* robot)
 	robot->destination.yd = 0;
 	robot->destination.totalDistanceError = 0;
 	robot->destination.totalAngleError = 0;
+
+	robot->imuReadings.w = 0;
+	robot->imuReadings.ax = 0;
+	robot->imuReadings.ay = 0;
+	robot->imuReadings.vxGlobal = 0;
+	robot->imuReadings.vyGlobal = 0;
 }
 
 void calculatePosition(Robot* robot)
@@ -28,9 +38,29 @@ void calculatePosition(Robot* robot)
 	float leftSpeed = RPM_TO_RAD * robot->motorLeft.rpm;
 	float rightSpeed = RPM_TO_RAD * robot->motorRight.rpm;
 
-	robot->position.x = robot->position.x + (SAMPLING_PERIOD * ((R/2.0) * cos(robot->position.ang) * (rightSpeed + leftSpeed)));
-	robot->position.y = robot->position.y + (SAMPLING_PERIOD * ((R/2.0) * sin(robot->position.ang) * (rightSpeed + leftSpeed)));
-	robot->position.ang = robot->position.ang + (SAMPLING_PERIOD * ((R/(2.0*B)) * (rightSpeed - leftSpeed)));
+	robot->encoderCalculatedPosition.x = robot->position.x + (SAMPLING_PERIOD * ((R/2.0) * cos(robot->position.ang) * (rightSpeed + leftSpeed)));
+	robot->encoderCalculatedPosition.y = robot->position.y + (SAMPLING_PERIOD * ((R/2.0) * sin(robot->position.ang) * (rightSpeed + leftSpeed)));
+	robot->encoderCalculatedPosition.ang = robot->position.ang + (SAMPLING_PERIOD * ((R/(2.0*B)) * (rightSpeed - leftSpeed)));
+
+	// x and y are reversed, because of chassis mounting
+//	float axGlobal = robot->imuReadings.ay*cos(robot->position.ang) - robot->imuReadings.ax*sin(robot->position.ang);
+//	float ayGlobal = robot->imuReadings.ay*sin(robot->position.ang) + robot->imuReadings.ax*cos(robot->position.ang);
+//
+//	robot->imuReadings.vxGlobal += axGlobal * SAMPLING_PERIOD;
+//	robot->imuReadings.vyGlobal += ayGlobal * SAMPLING_PERIOD;
+
+//	float accelX = robot->imuReadings.vxGlobal * SAMPLING_PERIOD;
+//	float accelY = robot->imuReadings.vyGlobal * SAMPLING_PERIOD;
+//
+//    float deltaX_odo = SAMPLING_PERIOD * ((R / 2.0) * cos(robot->position.ang) * (rightSpeed + leftSpeed));
+//    float deltaY_odo = SAMPLING_PERIOD * ((R / 2.0) * sin(robot->position.ang) * (rightSpeed + leftSpeed));
+
+	// position calculated by encoder is treated as absolute
+//	robot->position.x = 0.98 * robot->encoderCalculatedPosition.x + 0.02 * (accelX + robot->position.x);
+//	robot->position.y = 0.98 * robot->encoderCalculatedPosition.y + 0.02 * (accelY + robot->position.y);
+	robot->position.x = robot->encoderCalculatedPosition.x;
+	robot->position.y = robot->encoderCalculatedPosition.y;
+	robot->position.ang = 0.98 * robot->encoderCalculatedPosition.ang + 0.02 * (robot->imuReadings.w * SAMPLING_PERIOD + robot->position.ang);
 }
 
 void beginPositionControl(Robot* robot, int16_t x, int16_t y)
