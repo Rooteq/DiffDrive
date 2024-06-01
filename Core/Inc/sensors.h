@@ -35,7 +35,7 @@ void MPU6050_SetClockSource(uint8_t Source);
 void MPU6050_SetDlpf(uint8_t Value);
 
 void readRadar(Robot* robot, PollTimers* timers, TIM_HandleTypeDef *sensorTimer);
-void readImu(Robot* robot);
+void readImu(Robot* robot, PollTimers *timers);
 
 void MPU6050_SetIntEnableRegister(uint8_t Value);
 

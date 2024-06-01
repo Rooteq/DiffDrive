@@ -60,6 +60,7 @@ void calculatePosition(Robot* robot)
 //	robot->position.y = 0.98 * robot->encoderCalculatedPosition.y + 0.02 * (accelY + robot->position.y);
 	robot->position.x = robot->encoderCalculatedPosition.x;
 	robot->position.y = robot->encoderCalculatedPosition.y;
+//	robot->position.ang = robot->encoderCalculatedPosition.ang;
 	robot->position.ang = 0.98 * robot->encoderCalculatedPosition.ang + 0.02 * (robot->imuReadings.w * SAMPLING_PERIOD + robot->position.ang);
 }
 
@@ -165,8 +166,13 @@ void setStateFlag(Robot* robot, InternalState state) // TODO change logic
 	{
 		robot->flag |= 0x10;
 	}
-
-	// if obstacle use or to add obstacle flag
-	// make obstacle as a global variable - flag should only source
 }
 
+
+void initPollTimers(PollTimers* timers)
+{
+	timers->lastTx = HAL_GetTick();
+	timers->lastPathPlan = HAL_GetTick();
+	timers->lastRadarPoll = HAL_GetTick();
+	timers->lastImuPoll = HAL_GetTick();
+}

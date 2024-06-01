@@ -12,13 +12,13 @@
 #include <main.h>
 #include "robot.h"
 
-#define RxBuf_SIZE 10 // max message sizes
+#define RxBuf_SIZE 10
 #define MainBuf_SIZE 20
 
 #define POS_BUFFER_SIZE 12
-#define START_BYTE 0xAA // Znacznik początku ramki
-#define END_BYTE 0x55   // Znacznik końca ramki
-#define CRC_POLYNOMIAL 0x1021 // Standard CRC-16-ANSI polynomial
+#define START_BYTE 0xAA
+#define END_BYTE 0x55
+#define CRC_POLYNOMIAL 0x1021
 
 typedef struct{
 	uint8_t handleIncomingData;
@@ -36,7 +36,6 @@ typedef struct{
 } TxCommsData;
 
 
-void initPollTimers(PollTimers* timers);
 
 void initRxComms(RxCommsData* rxCommsData);
 void initTxComms(TxCommsData* txCommsData, UART_HandleTypeDef *huart, Position* pos, StateFlag *flag, uint8_t *obstacleDistance);
@@ -50,7 +49,7 @@ void handleDestinationCommand(RxCommsData* rxCommsData, Robot* robot);
 
 
 void handleRx(RxCommsData* rxCommsData, Robot* robot);
-void handleTx(TxCommsData* txCommsData, PollTimers* pollTimers); // make pollTimers internal? call it on interrupts?
+void handleTx(TxCommsData* txCommsData, PollTimers* pollTimers);
 
 
 

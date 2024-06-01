@@ -172,7 +172,7 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-  initMotor(&(robot.motorRight), &htim3, TIM_CHANNEL_1, &htim4, RIGHT); // TODO: move motor initialization to robot initialization
+  initMotor(&(robot.motorRight), &htim3, TIM_CHANNEL_1, &htim4, RIGHT);
   initMotor(&(robot.motorLeft), &htim3, TIM_CHANNEL_2, &htim5, LEFT);
 
   initRobot(&robot);
@@ -202,9 +202,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  //HAL_StatusTypeDef i2cStatus = HAL_I2C_IsDeviceReady(&hi2c1, 0b11010000, 1, 100);
 
-  motorSetConstSpeed(&(robot.motorLeft), 0); // TODO: move to init
+  motorSetConstSpeed(&(robot.motorLeft), 0);
   motorSetConstSpeed(&(robot.motorRight), 0);
 
   while (1)
@@ -212,7 +211,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  readImu(&robot);
+	  readImu(&robot, &pollTimers);
 	  readRadar(&robot, &pollTimers, &htim2);
 	  pathPlanner(&robot, &pollTimers);
 

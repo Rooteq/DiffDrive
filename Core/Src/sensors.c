@@ -3,6 +3,16 @@
 
 #define I2C_TIMEOUT 50
 
+//float wPrevOutput = 0;
+//float wPrevReading = 0;
+float alpha = 0.9;
+
+float prevAXOutput = 0;
+float prevAYOutput = 0;
+
+float prevAXReading = 0;
+float prevAYReading = 0;
+
 I2C_HandleTypeDef *i2c;
 float Acc_Scale;
 float Gyr_Scale;
@@ -170,9 +180,29 @@ void MPU6050_GetAccelerometerScaled(float* x, float* y)
 	*y = (float)tmp_y * Acc_Scale + 330;
 }
 
-void readImu(Robot* robot)
+void readImu(Robot* robot, PollTimers *timers)
 {
-	MPU6050_GetRotationScaled(&(robot->imuReadings.w));
-	//MPU6050_GetAccelerometerScaled(&(robot->imuReadings.ax), &(robot->imuReadings.ay));
+	if(HAL_GetTick() - timers->lastImuPoll > 50)
+	{
+		float w;
+		float ax, ay;
+		MPU6050_GetRotationScaled(&w);
+		MPU6050_GetAccelerometerScaled(&(ax), &(ay));
+
+		float axOutput = alpha * (prevAXOutput + ax - prevAXReading);
+		float ayOutput = alpha * (prevAYOutput + ay - prevAYReading);
+
+		robot->imuReadings.w = w;
+		robot->imuReadings.ax = axOutput;
+		robot->imuReadings.ay = ayOutput;
+
+		prevAXOutput = axOutput;
+		prevAYOutput = ayOutput;
+
+		prevAXReading = ax;
+		prevAYReading = ay;
+
+		timers->lastImuPoll = HAL_GetTick();
+	}
 }
 

@@ -33,6 +33,7 @@ typedef struct{
 	uint32_t lastTx;
 	uint32_t lastPathPlan;
 	uint32_t lastRadarPoll;
+	uint32_t lastImuPoll;
 }PollTimers;
 
 typedef uint8_t StateFlag; //
@@ -80,7 +81,9 @@ typedef struct
 	Destination destination;
 }Robot;
 
-void initRobot(Robot* robot); // TODO add motor init inside?
+void initRobot(Robot* robot);
+void initPollTimers(PollTimers* timers);
+
 void calculatePosition(Robot* robot);
 
 void beginPositionControl(Robot* robot, int16_t x, int16_t y);

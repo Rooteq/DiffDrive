@@ -30,15 +30,12 @@ typedef enum
 	RIGHT = 1
 } MotorSide;
 
-// TODO: Sample the encoders every miliseconds from sysTick!!!
-
 typedef struct{
 	int16_t velocity;
 	uint32_t lastCounterValue;
 	TIM_HandleTypeDef *encoderHtim;
-	// channel
 
-} EncoderInstance; // change encoder for motor?
+} EncoderInstance;
 
 
 typedef struct
