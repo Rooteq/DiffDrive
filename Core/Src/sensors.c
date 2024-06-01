@@ -1,7 +1,7 @@
 #include "sensors.h"
 #include "math.h"
 
-#define I2C_TIMEOUT 50
+#define I2C_TIMEOUT 100
 
 //float wPrevOutput = 0;
 //float wPrevReading = 0;
@@ -105,12 +105,6 @@ void MPU6050_SetFullScaleGyroRange(uint8_t Range)
 //		case MPU6050_GYRO_FS_500:
 //			Gyr_Scale = 0.015267;
 //			break;
-//		case MPU6050_GYRO_FS_1000:
-//			Gyr_Scale = 0.030487;
-//			break;
-//		case MPU6050_GYRO_FS_2000:
-//			Gyr_Scale = 0.060975;
-//			break;
 		default:
 			break;
 	}
@@ -131,15 +125,6 @@ void MPU6050_SetFullScaleAccelRange(uint8_t Range)
 //			Acc_Scale = 0.0005982; //[m/s^2]
 			Acc_Scale = 0.5982; //[mm/s^2]
 			break;
-//		case MPU6050_ACCEL_FS_4:
-//			Acc_Scale = 0.000122;
-//			break;
-//		case MPU6050_ACCEL_FS_8:
-//			Acc_Scale = 0.000244;
-//			break;
-//		case MPU6050_ACCEL_FS_16:
-//			Acc_Scale = 0.0004882;
-//			break;
 		default:
 			break;
 	}
@@ -151,7 +136,7 @@ void MPU6050_GetRotationScaled(float* w)
 	HAL_I2C_Mem_Read(i2c, MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, 1, tmp, 2, I2C_TIMEOUT);
 
 	int16_t val = ((((int16_t)tmp[0]) << 8) | tmp[1]);
-	*w = (float)val*0.00013322-0.021; // offset?
+	*w = (float)val*0.00013322-0.021;
 }
 
 float MPU6050_GetAccelerationZ(void)

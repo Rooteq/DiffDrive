@@ -107,16 +107,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim6) // update every 10ms
 	{
-		calculatePosition(&robot); // calculate position at the beggining - it uses previous state vector
+		calculatePosition(&robot); // uses previous state vector, calculate at the beginning
 
-		motorUpdateVelocity(&(robot.motorLeft)); // was after calculate position
+		motorUpdateVelocity(&(robot.motorLeft));
 		motorRegulateVelocity(&(robot.motorLeft));
 		motorUpdateVelocity(&(robot.motorRight));
 		motorRegulateVelocity(&(robot.motorRight));
 	}
 	if(htim == &htim4)
 	{
-
+		// deprecated
 	}
 }
 

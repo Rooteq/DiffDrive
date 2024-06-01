@@ -43,14 +43,14 @@ void calculatePosition(Robot* robot)
 	robot->encoderCalculatedPosition.ang = robot->position.ang + (SAMPLING_PERIOD * ((R/(2.0*B)) * (rightSpeed - leftSpeed)));
 
 	// x and y are reversed, because of chassis mounting
-//	float axGlobal = robot->imuReadings.ay*cos(robot->position.ang) - robot->imuReadings.ax*sin(robot->position.ang);
-//	float ayGlobal = robot->imuReadings.ay*sin(robot->position.ang) + robot->imuReadings.ax*cos(robot->position.ang);
+	float axGlobal = robot->imuReadings.ay*cos(robot->position.ang) - robot->imuReadings.ax*sin(robot->position.ang);
+	float ayGlobal = robot->imuReadings.ay*sin(robot->position.ang) + robot->imuReadings.ax*cos(robot->position.ang);
 //
-//	robot->imuReadings.vxGlobal += axGlobal * SAMPLING_PERIOD;
-//	robot->imuReadings.vyGlobal += ayGlobal * SAMPLING_PERIOD;
+	robot->imuReadings.vxGlobal += axGlobal * SAMPLING_PERIOD;
+	robot->imuReadings.vyGlobal += ayGlobal * SAMPLING_PERIOD;
 
-//	float accelX = robot->imuReadings.vxGlobal * SAMPLING_PERIOD;
-//	float accelY = robot->imuReadings.vyGlobal * SAMPLING_PERIOD;
+	float accelX = robot->imuReadings.vxGlobal * SAMPLING_PERIOD;
+	float accelY = robot->imuReadings.vyGlobal * SAMPLING_PERIOD;
 //
 //    float deltaX_odo = SAMPLING_PERIOD * ((R / 2.0) * cos(robot->position.ang) * (rightSpeed + leftSpeed));
 //    float deltaY_odo = SAMPLING_PERIOD * ((R / 2.0) * sin(robot->position.ang) * (rightSpeed + leftSpeed));
@@ -58,6 +58,10 @@ void calculatePosition(Robot* robot)
 	// position calculated by encoder is treated as absolute
 //	robot->position.x = 0.98 * robot->encoderCalculatedPosition.x + 0.02 * (accelX + robot->position.x);
 //	robot->position.y = 0.98 * robot->encoderCalculatedPosition.y + 0.02 * (accelY + robot->position.y);
+//	robot->position.x += accelX;
+//	robot->position.y += accelY;
+
+
 	robot->position.x = robot->encoderCalculatedPosition.x;
 	robot->position.y = robot->encoderCalculatedPosition.y;
 //	robot->position.ang = robot->encoderCalculatedPosition.ang;
@@ -80,13 +84,14 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 		return;
 
 	setStateFlag(robot, AUTO_MOVE);
-	if(HAL_GetTick() - timer->lastPathPlan > 50)
+	if(HAL_GetTick() - timer->lastPathPlan > 200)
 	{
-		if((fabsf((float)robot->destination.yd - robot->position.y) < 1) && (fabsf((float)robot->destination.xd - robot->position.x) < 1))
+		if((fabsf((float)robot->destination.yd - robot->position.y) < 3) && (fabsf((float)robot->destination.xd - robot->position.x) < 3))
 		{
 			motorSetConstSpeed(&(robot->motorLeft), 0);
 			motorSetConstSpeed(&(robot->motorRight), 0);
 			robot->goToPoint = false;
+			setStateFlag(robot, STOPPED);
 			return;
 		}
 
@@ -96,7 +101,7 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 		robot->destination.totalAngleError += ang;
 
 		float pATerm = (float)KW * ang; // proportional angle term
-		float iATerm = (float)IW * robot->destination.totalAngleError * 0.05;
+		float iATerm = (float)IW * robot->destination.totalAngleError * 0.2;
 		float w = pATerm + iATerm; // + iATerm
 
 		float distance = sqrt(pow(((float)robot->destination.xd - robot->position.x),2)+pow(((float)robot->destination.yd - robot->position.y),2));
@@ -108,7 +113,7 @@ void pathPlanner(Robot* robot, PollTimers *timer)
 		if(pVTerm > 100)
 			pVTerm = 100;
 
-		float iVTerm = (float)IV * robot->destination.totalDistanceError * 0.05;
+		float iVTerm = (float)IV * robot->destination.totalDistanceError * 0.2;
 
 		if(iVTerm > 100)
 			iVTerm = 100;

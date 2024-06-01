@@ -115,7 +115,7 @@ void handleDestinationCommand(RxCommsData* rxCommsData, Robot* robot)
 	}
 }
 
-void handleRx(RxCommsData* rxCommsData, Robot* robot) // pass internal state as argument so that it could do something xdd
+void handleRx(RxCommsData* rxCommsData, Robot* robot)
 {
 	if(rxCommsData->handleIncomingData == 1)
 	{
