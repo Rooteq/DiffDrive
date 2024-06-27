@@ -6,7 +6,7 @@ made in Qt (https://github.com/Rooteq/DiffSight).
 
 ## Hardware
 This robot is composed of 3D printed mobile platform, 2 DC motors with encoders, Nucleo STM32F476RG board, 
-ESP32 board, H brige, HC-SR04 ultrasonic sensor and MPU6050 IMU. 
+ESP32 board, H brige, HC-SR04 ultrasonic sensor and MPU6050 IMU. Schematics are located in [Mechanics](https://github.com/Rooteq/DiffSight) folder
 
 ## Key Features
 - **Odometry** The robot can localize itself by fusing data from the encoders and the IMU.
@@ -20,3 +20,7 @@ ESP32 board, H brige, HC-SR04 ultrasonic sensor and MPU6050 IMU.
 - **Complementary filter:** Better estimation of position vector by fusing data from the encoders and the IMU.
 - **Position controllers:** The robot can autonomically reach its destination with the help of 2 PI controllers.
 - **UART communication between controllers:** Custom frame with CRC is used to exchange data between STM32 and ESP32.
+
+## Assembled robot
+Assembled robot looks like this:
+![assembled robot](./Mechanics/robot.jpg)
